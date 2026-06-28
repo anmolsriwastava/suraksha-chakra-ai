@@ -1,0 +1,40 @@
+```gitignore
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# Environment variables
+.env
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Python cache
+.pytest_cache/
+
+# Node
+node_modules/
+
+# Build
+dist/
+build/
+
+# Data
+data/embeddings/
+
+# OS
+.DS_Store
+Thumbs.db
+```
