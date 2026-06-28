@@ -17,7 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.core.config import get_settings
 from backend.db.database import engine, Base
 from backend.services.wage_engine import get_wage_engine
-from backend.api import whatsapp, wages, reports, dashboard
+from backend.api import whatsapp, wages, reports, dashboard, chat
 
 logging.basicConfig(
     level=logging.INFO,
@@ -60,6 +60,7 @@ app.include_router(whatsapp.router, prefix="/webhook", tags=["WhatsApp"])
 app.include_router(wages.router, prefix="/api/wages", tags=["Wages"])
 app.include_router(reports.router, prefix="/api/reports", tags=["Reports"])
 app.include_router(dashboard.router, prefix="/api/dashboard", tags=["Dashboard"])
+app.include_router(chat.router, prefix="/api/chat", tags=["Chat"])
 
 
 @app.get("/health")

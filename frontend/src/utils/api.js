@@ -25,6 +25,20 @@ async function get(path) {
   return res.json();
 }
 
+// ── Chat (new AI pipeline) ──────────────────────────────────────────
+
+/**
+ * Send a chat message (text or voice) to the new /api/chat endpoint.
+ * Returns { reply, session_id, extracted, quick_replies }
+ */
+export async function sendChatMessage(message, sessionId = 'demo-user', audioBase64 = null) {
+  return post('/api/chat', {
+    message,
+    session_id: sessionId,
+    audio_base64: audioBase64,
+  });
+}
+
 // ── Wages ────────────────────────────────────────────────────────────
 
 export function queryFairWage(occupation, district, state) {
@@ -70,24 +84,4 @@ export function fetchVulnerabilityScores(minScore = 0) {
 
 export function fetchRecentAlerts() {
   return get('/api/dashboard/recent-alerts');
-}
-
-// ── WhatsApp webhook (web simulation) ───────────────────────────────
-
-/**
- * Simulate a WhatsApp message to the bot.
- * In real Twilio setup, Twilio calls this — here the browser calls it directly.
- */
-export async function sendBotMessage(text, phoneHash = 'demo-user') {
-  const formData = new FormData();
-  formData.append('From', `whatsapp:${phoneHash}`);
-  formData.append('Body', text);
-
-  const res = await fetch(`${BASE}/webhook/whatsapp`, {
-    method: 'POST',
-    body: formData,
-  });
-
-  if (!res.ok) throw new Error(`Bot request failed: ${res.status}`);
-  return res.text(); // webhook returns plain text
 }

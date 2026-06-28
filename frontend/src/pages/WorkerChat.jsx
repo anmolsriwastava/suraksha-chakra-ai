@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { sendBotMessage } from '../utils/api';
+import { sendChatMessage } from '../utils/api';
 
 // ── Helpers ────────────────────────────────────────────────────────────
 
@@ -108,34 +108,11 @@ Aap *Hindi ya Hinglish* mein likh sakte hain.
 Voice message bhi bhej sakte hain! 🎤`,
 };
 
-const QUICK_REPLY_SETS = {
-  welcome: [
-    'Delhi mein mason ka kaam mila',
-    'Mumbai mein electrician hoon',
-    'Contractor check karna hai',
-  ],
-  after_wage: [
-    'Mujhe ₹400 mil raha hai',
-    'Mujhe ₹500 mil raha hai',
-    'Mujhe ₹600 mil raha hai',
-    'Contractor ka naam batana hai',
-  ],
-  after_report: [
-    'Doosra contractor check karna hai',
-    'Naya wage query karna hai',
-    'Help chahiye',
-  ],
-};
-
-// Detect which quick reply set to show based on last bot message
-function detectQuickReplies(botText) {
-  if (!botText) return QUICK_REPLY_SETS.welcome;
-  if (botText.includes('kitna mil raha hai') || botText.includes('actual wage'))
-    return QUICK_REPLY_SETS.after_wage;
-  if (botText.includes('save ho gaya') || botText.includes('Dhanyavad'))
-    return QUICK_REPLY_SETS.after_report;
-  return [];
-}
+const DEFAULT_QUICK_REPLIES = [
+  'Delhi mein mason ka kaam mila',
+  'Mumbai mein electrician hoon',
+  'Contractor check karna hai',
+];
 
 // ── Main WorkerChat component ──────────────────────────────────────────
 
@@ -144,12 +121,14 @@ export default function WorkerChat() {
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
-  const [quickReplies, setQuickReplies] = useState(QUICK_REPLY_SETS.welcome);
+  const [quickReplies, setQuickReplies] = useState(DEFAULT_QUICK_REPLIES);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const [sessionId] = useState('demo-user-' + Date.now());
 
   const listRef = useRef(null);
   const inputRef = useRef(null);
   const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
   const recordingTimerRef = useRef(null);
   const nextId = useRef(1);
 
@@ -174,10 +153,15 @@ export default function WorkerChat() {
     setIsTyping(true);
 
     try {
-      const reply = await sendBotMessage(text.trim());
+      const response = await sendChatMessage(text.trim(), sessionId);
       setIsTyping(false);
-      addMessage({ from: 'bot', type: 'text', text: reply, timestamp: new Date() });
-      setQuickReplies(detectQuickReplies(reply));
+      addMessage({ from: 'bot', type: 'text', text: response.reply, timestamp: new Date() });
+      // Use server-provided quick replies if available, otherwise use defaults
+      setQuickReplies(
+        response.quick_replies && response.quick_replies.length > 0
+          ? response.quick_replies
+          : []
+      );
     } catch (err) {
       setIsTyping(false);
       addMessage({
@@ -187,7 +171,7 @@ export default function WorkerChat() {
         timestamp: new Date(),
       });
     }
-  }, [addMessage]);
+  }, [addMessage, sessionId]);
 
   const handleSend = () => sendText(inputText);
 
@@ -198,36 +182,57 @@ export default function WorkerChat() {
     }
   };
 
-  // Voice recording
+  // Voice recording — sends actual audio as base64 to backend
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const recorder = new MediaRecorder(stream);
-      const chunks = [];
+      audioChunksRef.current = [];
 
-      recorder.ondataavailable = (e) => chunks.push(e.data);
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          audioChunksRef.current.push(e.data);
+        }
+      };
+
       recorder.onstop = async () => {
         stream.getTracks().forEach((t) => t.stop());
 
-        // Show the voice bubble immediately (optimistic)
         const duration = recordingSeconds;
         addMessage({ from: 'user', type: 'voice', duration, timestamp: new Date() });
         setIsTyping(true);
         setRecordingSeconds(0);
 
-        // For demo: transcribe via a text fallback
-        // In production, send audio blob to /webhook/whatsapp with MediaUrl
+        // Convert audio blob to base64 and send to backend
+        const blob = new Blob(audioChunksRef.current, { type: 'audio/ogg; codecs=opus' });
+
         try {
-          const reply = await sendBotMessage('[Voice message: Delhi mein mason ka kaam mila hai]');
+          const reader = new FileReader();
+          const base64Promise = new Promise((resolve, reject) => {
+            reader.onloadend = () => {
+              const base64 = reader.result.split(',')[1];
+              resolve(base64);
+            };
+            reader.onerror = reject;
+          });
+          reader.readAsDataURL(blob);
+
+          const audioBase64 = await base64Promise;
+          const response = await sendChatMessage('', sessionId, audioBase64);
+
           setIsTyping(false);
-          addMessage({ from: 'bot', type: 'text', text: reply, timestamp: new Date() });
-          setQuickReplies(detectQuickReplies(reply));
-        } catch {
+          addMessage({ from: 'bot', type: 'text', text: response.reply, timestamp: new Date() });
+          setQuickReplies(
+            response.quick_replies && response.quick_replies.length > 0
+              ? response.quick_replies
+              : []
+          );
+        } catch (err) {
           setIsTyping(false);
           addMessage({
             from: 'bot',
             type: 'text',
-            text: 'Voice message mila, par process nahi hua. Text mein try karein.',
+            text: 'Voice message mila, par process nahi ho saka. Text mein try karein. 🙏',
             timestamp: new Date(),
           });
         }
