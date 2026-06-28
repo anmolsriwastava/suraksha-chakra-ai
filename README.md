@@ -1,32 +1,15 @@
-# Suraksha Chakra 🛡️
-**Labour rights intelligence for India's 450M informal workers**
+# Suraksha Chakra AI
+**AI-Powered Predictive Safety & Labour Intelligence Platform for Climate-Vulnerable Communities**
 
-A crowdsourced, AI-powered system that:
-- Tells workers their **fair wage** before they start a job (RAG on BOCW data)
-- Builds an anonymous **contractor risk score** from worker reports  
-- **Alerts NGOs** when a contractor crosses the bad-report threshold
-- **Predicts vulnerability windows** before climate disasters hit (IMD + NCRB)
+
+Suraksha Chakra AI is an AI-powered early warning platform that combines labour rights intelligence, crowdsourced wage reports, contractor risk scoring, and climate vulnerability forecasting into a unified decision-support system for workers, NGOs, labour departments, and disaster management authorities.
+
+Rather than responding after exploitation occurs, the platform continuously learns from worker reports and public datasets to identify unsafe contractors, detect exploitation patterns, and forecast vulnerable districts before disasters increase the risk of women trafficking,forced marriage, wage theft, and forced labour. 
+
 
 ---
 
-## Quick Start
 
-```bash
-# 1. Clone and setup
-cd backend
-pip install -r requirements.txt
-
-# 2. Copy and fill env
-cp ../.env.example .env
-# → Add your OpenAI key at minimum. Everything else is optional for demo.
-
-# 3. Start a local Postgres (or use SQLite for pure demo)
-# For demo without Postgres, change DATABASE_URL in .env to:
-# sqlite:///./suraksha.db
-
-# 4. Run
-uvicorn backend.main:app --reload --port 8000
-```
 
 ## API Endpoints
 
@@ -45,35 +28,15 @@ uvicorn backend.main:app --reload --port 8000
 
 ## Architecture
 
-```
-Worker (WhatsApp voice) → Sarvam AI (Hindi STT) → NLP Intent Extractor
-                                                          ↓
-                                              RAG Wage Engine (BOCW PDFs + FAISS)
-                                                          ↓
-                                              Contractor Risk Score DB
-                                                          ↓
-                                        (threshold crossed) → NGO Alert (SendGrid)
 
-Parallel: IMD + NCRB + Migration data → Vulnerability Scorer → Predictive NGO Alerts
-```
+
 
 ## Data Sources (all free, all public)
 
-- **BOCW wage schedules**: labour.gov.in (state-wise PDFs)
-- **NCRB crime data**: ncrb.gov.in (district CSVs, download manually)
+- **BOCW wage schedules**: labour.gov.in (state-wise)
+- **NCRB crime data**: ncrb.gov.in 
 - **IMD weather**: api.imd.gov.in
 - **NDMA displacement**: ndma.gov.in
 - **Migration flows**: Census 2011 + PLFS (mospi.gov.in)
 
-## Running the Vulnerability Scorer (cron)
 
-```python
-from backend.db.database import SessionLocal
-from backend.services.vulnerability_scorer import run_full_vulnerability_update
-
-db = SessionLocal()
-run_full_vulnerability_update(db)
-db.close()
-```
-
-Set this up as a daily cron or APScheduler task.
