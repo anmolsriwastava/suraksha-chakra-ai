@@ -6,6 +6,8 @@ Suraksha Chakra AI is an AI-powered early warning platform that combines labour 
 
 Rather than responding after exploitation occurs, the platform continuously learns from worker reports and public datasets to identify unsafe contractors, detect exploitation patterns, and forecast vulnerable districts before disasters increase the risk of women trafficking,forced marriage, wage theft, and forced labour. 
 
+It does not rely on manually assigned district scores. I made district-level features from multiple public datasets like migration intensity, historical crime trends, disaster frequency, socioeconomic vulnerability, and live crowdsourced wage reports. These standardized features are combined into a composite vulnerability index. As more real worker reports are collected, the model transitions from rule-based scoring to a data-driven predictive model.
+
 
 ---
 
