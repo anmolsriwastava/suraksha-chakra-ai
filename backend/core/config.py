@@ -13,13 +13,13 @@ class Settings(BaseSettings):
     database_url: str
 
     # External APIs
-    GROQ_API_KEY: str
-    sarvam_api_key: str = ""  # optional, falls back to Whisper
+    groq_api_key: str
+    sarvam_api_key: str = ""
     twilio_account_sid: str = ""
     twilio_auth_token: str = ""
     twilio_whatsapp_number: str = "whatsapp:+14155238886"
     sendgrid_api_key: str = ""
-    alert_from_email: str = "alerts@surakshaakra.in"
+    alert_from_email: str = "bsdcc2503@isical.ac.in"
 
     # Business logic thresholds
     wage_gap_alert_threshold: int = 5
