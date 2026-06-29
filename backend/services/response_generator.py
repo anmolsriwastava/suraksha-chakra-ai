@@ -266,7 +266,7 @@ def generate_ask_missing_info(
     prompts = {
         "occupation": "Aap kya kaam karte hain? Jaise: raaj mistri, electrician, plumber, helper",
         "location": "Aap kahan kaam kar rahe hain? Shehar ya district ka naam batayein.",
-        "contractor_name": "Kis contractor ka naam check karna hai? Unka naam likhen. Jaise: Ramesh Constructions, Delhi",
+        "contractor_name": "Kis contractor ka naam check karna hai? Unka naam likhen ya bolein. Jaise: Ramesh Constructions, Delhi",
         "reported_wage": "Aapko kitna mil raha hai? Sirf number bhejein (jaise: 400)",
     }
     return prompts.get(

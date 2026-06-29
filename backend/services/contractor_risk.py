@@ -2,21 +2,26 @@
 Contractor Risk Scoring Service
 
 Manages the risk score for every contractor in the system.
-Score starts at 100 (clean), degrades with each credible bad report.
+Score ranges from 0 (clean) to 100 (maximum risk).
 
-The scoring logic is intentionally simple and explainable —
-judges and NGOs need to understand it, not just trust it.
+The scoring logic is based on:
+- 40 * normalized complaint count
+- 30 * average wage gap %
+- 20 * repeat offender score
+- 10 * recency factor
 
 Score ranges:
-  80-100 : Green  — no significant complaints
-  50-79  : Yellow — some concerns, worker should be cautious
-  0-49   : Red    — high risk, alert pre-loaded for next query
+  0-25   : Green  — low risk, safe
+  26-50  : Yellow — some concerns, caution
+  51-75  : Orange — high risk
+  76-100 : Red    — maximum risk, avoid
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 
 from backend.models.models import ContractorRisk, WageReport, NgoAlert
 from backend.core.config import get_settings
@@ -25,20 +30,21 @@ logger = logging.getLogger(__name__)
 settings = get_settings()
 
 
-def find_or_create_contractor(
+def find_contractor(
     db: Session,
     name: str,
     district: str,
-    state: str,
-    phone: str = None,
 ) -> ContractorRisk:
     """
-    Look up a contractor by name + district. If not found, create a new entry.
+    Look up a contractor by name + district.
     We normalise the name to lowercase for matching.
     """
+    if not name or not district:
+        return None
+        
     normalised_name = name.strip().lower()
 
-    contractor = (
+    return (
         db.query(ContractorRisk)
         .filter(
             ContractorRisk.name == normalised_name,
@@ -47,21 +53,34 @@ def find_or_create_contractor(
         .first()
     )
 
-    if not contractor:
-        contractor = ContractorRisk(
-            name=normalised_name,
-            phone=phone,
-            district=district,
-            state=state,
-            risk_score=100.0,
-            total_reports=0,
-            verified_bad_reports=0,
-        )
-        db.add(contractor)
-        db.commit()
-        db.refresh(contractor)
-        logger.info(f"New contractor created: {name} in {district}")
 
+def create_contractor(
+    db: Session,
+    name: str,
+    district: str,
+    state: str,
+    phone: str = None,
+) -> ContractorRisk:
+    """
+    Create a new contractor entry.
+    Only called when there's an active complaint.
+    """
+    normalised_name = name.strip().lower()
+    
+    contractor = ContractorRisk(
+        name=normalised_name,
+        phone=phone,
+        district=district,
+        state=state,
+        risk_score=0.0,
+        total_reports=0,
+        verified_bad_reports=0,
+    )
+    db.add(contractor)
+    db.commit()
+    db.refresh(contractor)
+    logger.info(f"New contractor created: {name} in {district}")
+    
     return contractor
 
 
@@ -79,7 +98,7 @@ def record_wage_report(
     Save a worker's wage report and update the contractor's risk score.
     Returns the saved report.
     """
-    wage_gap = fair_wage - reported_wage
+    wage_gap = max(0.0, fair_wage - reported_wage)  # Only count underpayment as gap
     gap_percent = (wage_gap / fair_wage) * 100 if fair_wage > 0 else 0
 
     report = WageReport(
@@ -94,13 +113,11 @@ def record_wage_report(
         gap_percent=gap_percent,
     )
     db.add(report)
-
-    # only hurt the risk score if the gap is meaningful (>10%)
-    if gap_percent > 10:
-        _degrade_contractor_risk(db, contractor_id, gap_percent)
-
     db.commit()
     db.refresh(report)
+
+    if contractor_id:
+        _recalculate_risk(db, contractor_id)
 
     logger.info(
         f"Wage report saved: worker={worker_id}, "
@@ -109,41 +126,64 @@ def record_wage_report(
     return report
 
 
-def _degrade_contractor_risk(
-    db: Session,
-    contractor_id: int,
-    gap_percent: float,
-):
+def _recalculate_risk(db: Session, contractor_id: int):
     """
-    Reduce a contractor's risk score based on wage gap severity.
-    Bigger the theft, bigger the penalty.
-
-    Penalty scale:
-      10-25% gap  → -8 points
-      25-50% gap  → -15 points
-      >50% gap    → -25 points
+    Recalculate contractor risk based on:
+    score = 40(norm_complaint_count) + 30(avg_wage_gap_pct) + 20(repeat_offender) + 10(recency)
     """
     contractor = db.get(ContractorRisk, contractor_id)
     if not contractor:
         return
 
-    if gap_percent > 50:
-        penalty = 25
-    elif gap_percent > 25:
-        penalty = 15
-    else:
-        penalty = 8
+    # Fetch all bad reports (where gap > 0)
+    bad_reports = (
+        db.query(WageReport)
+        .filter(WageReport.contractor_id == contractor_id, WageReport.wage_gap > 0)
+        .all()
+    )
+    
+    num_complaints = len(bad_reports)
+    
+    if num_complaints == 0:
+        contractor.risk_score = 0.0
+        contractor.total_reports = 0
+        contractor.verified_bad_reports = 0
+        db.commit()
+        return
 
-    contractor.risk_score = max(0.0, contractor.risk_score - penalty)
-    contractor.total_reports += 1
-    contractor.verified_bad_reports += 1
+    # 1. Normalize complaint count (cap at 10 for max score of 40)
+    norm_complaint = min(1.0, num_complaints / 10.0)
+
+    # 2. Average wage gap % (cap at 50% gap for max score of 30)
+    avg_gap_pct = sum(r.gap_percent for r in bad_reports) / num_complaints
+    norm_gap = min(1.0, avg_gap_pct / 50.0)
+
+    # 3. Repeat offender (multiple reports from DIFFERENT workers)
+    unique_workers = len(set(r.worker_id for r in bad_reports))
+    norm_repeat = min(1.0, unique_workers / 5.0)
+
+    # 4. Recency (did a complaint happen in the last 30 days?)
+    most_recent = max(r.reported_at for r in bad_reports)
+    days_ago = (datetime.utcnow() - most_recent).days
+    # If 0 days ago -> 1.0. If 90 days ago -> 0.0
+    norm_recency = max(0.0, 1.0 - (days_ago / 90.0))
+
+    # Calculate final score
+    score = (40 * norm_complaint) + (30 * norm_gap) + (20 * norm_repeat) + (10 * norm_recency)
+    
+    # Clamp 0 - 100
+    final_score = max(0.0, min(100.0, score))
+
+    contractor.risk_score = final_score
+    contractor.total_reports = num_complaints
+    contractor.verified_bad_reports = num_complaints
     contractor.last_updated = datetime.utcnow()
 
-    db.add(contractor)
+    db.commit()
+    
     logger.info(
-        f"Contractor {contractor_id} risk score: "
-        f"{contractor.risk_score + penalty:.0f} → {contractor.risk_score:.0f} "
-        f"(penalty={penalty}, gap={gap_percent:.1f}%)"
+        f"Contractor {contractor_id} risk recalculated: "
+        f"score={final_score:.1f} (complaints={num_complaints}, avg_gap={avg_gap_pct:.1f}%)"
     )
 
 
@@ -158,11 +198,13 @@ def get_contractor_risk_summary(
         return {"found": False}
 
     score = contractor.risk_score
-    if score >= 80:
+    
+    # 0-25 Green, 26-50 Yellow, 51-75 Orange, 76-100 Red
+    if score <= 25:
         level = "low"
         label = "Safe"
         advice = "No major complaints found. Still, report your wage so others are informed."
-    elif score >= 50:
+    elif score <= 50:
         level = "medium"
         label = "Caution"
         advice = (
@@ -215,7 +257,6 @@ def should_trigger_ngo_alert(db: Session, contractor_id: int) -> bool:
     if recent_alert:
         days_since_last = (datetime.utcnow() - recent_alert.sent_at).days
         if days_since_last < 7:
-            logger.info(f"Alert already sent {days_since_last}d ago for contractor {contractor_id}")
             return False
 
     return True

@@ -167,20 +167,28 @@ def _handle_contractor_check(
         'nahi', 'karna', 'hai', 'ka', 'ki', 'ke', 'mein', 'se',
         'raaj mistri', 'rajmistri', 'mason', 'electrician', 'plumber',
         'helper', 'carpenter', 'painter', 'welder', 'driver',
+        'obra', 'theka', 'mistri', 'kaam', 'check karna hai', 'naam batana hai'
     }
+    
+    # Very aggressive block: if the string matches any invalid exact phrase
+    cleaned_name = contractor_name.strip().lower()
     
     if (not contractor_name or not contractor_name.strip() or 
         len(contractor_name.strip()) < 4 or 
-        contractor_name.strip().lower() in invalid_names or
+        cleaned_name in invalid_names or
         # Block if name is just common Hindi words (no proper noun detected)
         all(word.lower() in invalid_names for word in contractor_name.strip().split())):
         return responder.generate_ask_missing_info("contractor_name")
 
     district = intent_result.location_district or session.get("pending_location", "")
     state = intent_result.location_state or ""
-    contractor = risk_service.find_or_create_contractor(
-        db, contractor_name, district, state
-    )
+    contractor = risk_service.find_contractor(db, contractor_name, district)
+    
+    if not contractor:
+        return responder.generate_contractor_not_found_response(
+            contractor_name, intent_result.language
+        )
+        
     session["pending_contractor_id"] = contractor.id
     session["last_intent"] = "contractor_check"
 
@@ -371,20 +379,30 @@ async def chat(
         if last_report:
             district = last_report.district or ""
             state = last_report.state or ""
-            contractor = risk_service.find_or_create_contractor(db, intent_result.contractor_name, district, state)
-            last_report.contractor_id = contractor.id
-            db.commit()
             
-            # Check NGO alert
-            if risk_service.should_trigger_ngo_alert(db, contractor.id):
-                contractor_db = db.get(ContractorRisk, contractor.id)
-                background_tasks.add_task(
-                    alert_service.send_wage_theft_alert,
-                    db, contractor_db, contractor_db.verified_bad_reports, district, state
-                )
-            
-            extracted["report_id"] = last_report.id
-            reply = f"✅ Contractor {intent_result.contractor_name} ka naam record ho gaya hai. Aap apna legal notice neeche download kar sakte hain."
+            if last_report.wage_gap > 0:
+                contractor = risk_service.find_contractor(db, intent_result.contractor_name, district)
+                if not contractor:
+                    contractor = risk_service.create_contractor(db, intent_result.contractor_name, district, state)
+                
+                last_report.contractor_id = contractor.id
+                db.commit()
+                
+                # Recalculate since we attached a report
+                risk_service._recalculate_risk(db, contractor.id)
+                
+                # Check NGO alert
+                if risk_service.should_trigger_ngo_alert(db, contractor.id):
+                    contractor_db = db.get(ContractorRisk, contractor.id)
+                    background_tasks.add_task(
+                        alert_service.send_wage_theft_alert,
+                        db, contractor_db, contractor_db.verified_bad_reports, district, state
+                    )
+                
+                extracted["report_id"] = last_report.id
+                reply = f"✅ Contractor {intent_result.contractor_name} ka naam record ho gaya hai. Aap apna legal notice neeche download kar sakte hain."
+            else:
+                reply = f"Shukriya. Aapka data anonymised form mein record kar liya gaya hai."
             
             session["last_intent"] = "contractor_check"
             
