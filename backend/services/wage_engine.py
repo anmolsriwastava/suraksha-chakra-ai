@@ -40,15 +40,11 @@ class WageQueryResult:
 
 
 class WageEngine:
-    def __init__(self):
-        from langchain_huggingface import HuggingFaceEmbeddings
         from langchain_groq import ChatGroq
         
         self.vector_store = None
         self.qa_chain = None
-        self.embeddings = HuggingFaceEmbeddings(
-            model_name="sentence-transformers/all-MiniLM-L6-v2"
-        )
+        self.embeddings = None  # Disabled to prevent PyTorch OOM on Render
         self.llm = ChatGroq(
             groq_api_key=settings.groq_api_key,
             model_name="llama-3.1-8b-instant",
@@ -61,21 +57,13 @@ class WageEngine:
         Load the FAISS index from disk if it exists, otherwise
         build it fresh from all PDFs in data/raw/.
         """
-        from langchain_community.vectorstores import FAISS
-        
-        if self._embeddings_path.exists():
-            logger.info("Loading existing FAISS wage index from disk...")
-            self.vector_store = FAISS.load_local(
-                str(self._embeddings_path),
-                self.embeddings,
-                allow_dangerous_deserialization=True
-            )
-        else:
-            logger.info("No index found — building from raw PDFs...")
-            self._build_index_from_pdfs()
-
-        self._setup_qa_chain()
-        logger.info("Wage engine ready.")
+        # FAISS and PyTorch are disabled for the Render deployment because they
+        # exceed the 512MB RAM limit and cause silent OOM crashes.
+        # We rely exclusively on the deterministic BOCW_WAGES lookup table.
+        logger.info("FAISS index building disabled to save RAM. Using exact lookup only.")
+        self.vector_store = None
+        self.qa_chain = None
+        logger.info("Wage engine ready (Lookup mode).")
 
     def _load_all_pdfs(self) -> list:
         """
@@ -289,81 +277,55 @@ class WageEngine:
         Main entry point. Given an occupation and location,
         return the fair wage range from BOCW data.
 
-        Uses a deterministic lookup table first, falls back to RAG+LLM
-        for unknown combinations.
+        Uses deterministic lookup table. RAG is disabled for Render deployment.
         """
         occ_lower = occupation.lower().strip()
         loc_lower = location.lower().strip()
 
-        # Try direct lookup first (always consistent)
+        # Direct lookup (always consistent)
         exact_wage = self.BOCW_WAGES.get((loc_lower, occ_lower))
         if exact_wage:
             return WageQueryResult(
                 occupation=occupation,
                 location=location,
-                fair_wage_min=exact_wage,
+                fair_wage_min=exact_wage * 0.92,
                 fair_wage_max=exact_wage,
-                source=f"{location} BOCW minimum wage schedule 2024",
-                confidence="high",
+                source=f"{location.capitalize()} BOCW Minimum Wage Schedule 2024",
+                confidence="high"
             )
 
-        # Fallback to RAG + LLM for unknown combos
-        if self.qa_chain is None:
-            raise ValueError("Wage engine not initialized. Call load_or_build_index() first.")
-
-        question = (
-            f"What is the minimum daily wage for a {occupation} "
-            f"working in {location}, India according to BOCW schedule?"
-        )
-
-        try:
-            raw_response = self.qa_chain.invoke({"query": question})
-            result_text = raw_response.get("result", "")
-            wage_data = self._parse_llm_response(result_text)
-        except json.JSONDecodeError:
-            logger.error(f"LLM returned non-JSON for: {question}\nGot: {result_text}")
-            wage_data = self._get_hardcoded_fallback(occupation, location)
-        except Exception as e:
-            logger.error(f"Wage query failed: {e}")
-            wage_data = self._get_hardcoded_fallback(occupation, location)
-
-        fair_wage_min = wage_data.get("fair_wage_min") or 0
-        fair_wage_max = wage_data.get("fair_wage_max") or 0
+        # RAG is disabled to save RAM, return Groq LLM estimate directly
+        logger.warning(f"Using LLM fallback for {occupation} in {location} (RAG disabled)")
         
-        if fair_wage_min > 0 and fair_wage_min == fair_wage_max:
-            fair_wage_min = round(fair_wage_max * 0.92)
-
-        return WageQueryResult(
-            occupation=occupation,
-            location=location,
-            fair_wage_min=fair_wage_min,
-            fair_wage_max=fair_wage_max,
-            source=wage_data.get("source", "BOCW schedule"),
-            confidence=wage_data.get("confidence", "low"),
-        )
-
-    def _parse_llm_response(self, response_text: str) -> dict:
-        """Strip any markdown fences and parse JSON."""
-        cleaned = response_text.strip()
-        if cleaned.startswith("```"):
-            # strip ```json ... ``` wrapper
-            cleaned = cleaned.split("```")[1]
-            if cleaned.startswith("json"):
-                cleaned = cleaned[4:]
-        return json.loads(cleaned)
-
-    def _get_hardcoded_fallback(self, occupation: str, location: str) -> dict:
-        """
-        Last resort fallback if LLM fails.
-        Returns a broad safe range rather than wrong data.
-        """
-        logger.warning(f"Using hardcoded fallback for {occupation} in {location}")
-        return {
-            "fair_wage_min": 450,
-            "fair_wage_max": 700,
-            "source": "National floor wage estimate",
-            "confidence": "low",
-        }
+        try:
+            query_str = f"What is the minimum or fair wage for a {occupation} in {location} in India? Respond with only JSON: {{\"fair_wage_min\": 400, \"fair_wage_max\": 600, \"source\": \"Estimate\", \"confidence\": \"low\"}}"
+            res = self.llm.invoke(query_str)
+            raw_text = res.content.strip()
+            
+            if raw_text.startswith("```"):
+                raw_text = raw_text.split("\n", 1)[1].rsplit("\n", 1)[0]
+                
+            import json
+            data = json.loads(raw_text)
+            
+            return WageQueryResult(
+                occupation=occupation,
+                location=location,
+                fair_wage_min=float(data.get("fair_wage_min", 450)),
+                fair_wage_max=float(data.get("fair_wage_max", 700)),
+                source=data.get("source", "LLM Estimate"),
+                confidence="medium",
+            )
+        except Exception as e:
+            logger.error(f"LLM fallback failed: {e}")
+            return WageQueryResult(
+                occupation=occupation,
+                location=location,
+                fair_wage_min=450,
+                fair_wage_max=700,
+                source="National floor wage estimate",
+                confidence="low",
+            )
 
 
 # module-level singleton — initialized once at startup
