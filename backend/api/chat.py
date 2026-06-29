@@ -78,7 +78,7 @@ QUICK_REPLIES = {
     "welcome": [
         "Delhi mein mason ka kaam mila",
         "Mumbai mein electrician hoon",
-        "Contractor check karna hai",
+        "Contractor ka naam check karna hai",
     ],
     "after_wage": [
         "Mujhe ₹400 mil raha hai",
@@ -147,7 +147,11 @@ def _handle_contractor_check(
 ) -> str:
     """Check contractor risk and generate response."""
     contractor_name = intent_result.contractor_name
-    if not contractor_name:
+    invalid_names = {'doosra', 'koi', 'woh', 'contractor', 'thekedaar', 'thekedar', 'ek', 'us'}
+    
+    if (not contractor_name or not contractor_name.strip() or 
+        len(contractor_name.strip()) < 4 or 
+        contractor_name.strip().lower() in invalid_names):
         return responder.generate_ask_missing_info("contractor_name")
 
     district = intent_result.location_district or session.get("pending_location", "")
@@ -218,7 +222,7 @@ def _handle_report_wage(
 
     # Save the report
     state = location.split(",")[-1].strip() if "," in location else location
-    risk_service.record_wage_report(
+    report = risk_service.record_wage_report(
         db=db,
         worker_id=phone_hash,
         contractor_id=contractor_id,
@@ -247,14 +251,28 @@ def _handle_report_wage(
     session["pending_occupation"] = None
     session["pending_contractor_id"] = None
     session["last_intent"] = "report_wage"
-
-    return responder.generate_report_confirmation(
+    
+    base_reply = responder.generate_report_confirmation(
         reported_wage=reported_wage,
         fair_wage=fair_wage,
         wage_gap=wage_gap,
         gap_percent=gap_percent,
         language=intent_result.language,
     )
+    
+    is_wage_theft = (reported_wage < fair_wage) and (gap_percent > 10)
+    
+    if is_wage_theft:
+        if contractor_id:
+            # Store report ID to generate legal notice
+            session["last_report_id"] = report.id
+            return base_reply
+        else:
+            # Ask for contractor name if not provided
+            return f"{base_reply}\n\nContractor ka naam pata hai? Batayein toh legal notice generate kar sakte hain."
+    else:
+        # Paid fairly, no legal notice needed
+        return base_reply
 
 
 # ── Main chat endpoint ────────────────────────────────────────────────
@@ -271,6 +289,8 @@ async def chat(
     Main chat endpoint for the web frontend.
     Accepts text or base64-encoded audio, returns a natural response.
     """
+    logger.info(f'Audio received: {bool(request.audio_base64)}, length: {len(request.audio_base64) if request.audio_base64 else 0}')
+
     session = _get_or_create_session(request.session_id)
 
     # Step 1: Get text (transcribe audio if present)
@@ -320,6 +340,39 @@ async def chat(
 
     # Step 3: Route by intent and generate response
 
+    # Handle contractor attachment to previous wage report
+    if session.get('last_intent') == 'report_wage' and intent_result.contractor_name is not None and intent_result.intent != WorkerIntent.WAGE_QUERY:
+        phone_hash = _hash_phone(request.session_id)
+        from backend.models.models import WageReport, ContractorRisk
+        last_report = db.query(WageReport).filter(WageReport.worker_id == phone_hash).order_by(WageReport.reported_at.desc()).first()
+        
+        if last_report:
+            district = last_report.district or ""
+            state = last_report.state or ""
+            contractor = risk_service.find_or_create_contractor(db, intent_result.contractor_name, district, state)
+            last_report.contractor_id = contractor.id
+            db.commit()
+            
+            # Check NGO alert
+            if risk_service.should_trigger_ngo_alert(db, contractor.id):
+                contractor_db = db.get(ContractorRisk, contractor.id)
+                background_tasks.add_task(
+                    alert_service.send_wage_theft_alert,
+                    db, contractor_db, contractor_db.verified_bad_reports, district, state
+                )
+            
+            extracted["report_id"] = last_report.id
+            reply = f"✅ Contractor {intent_result.contractor_name} ka naam record ho gaya hai. Aap apna legal notice neeche download kar sakte hain."
+            
+            session["last_intent"] = "contractor_check"
+            
+            return ChatResponse(
+                reply=reply,
+                session_id=request.session_id,
+                extracted=extracted,
+                quick_replies=QUICK_REPLIES["after_report"],
+            )
+
     # Handle wage reporting (multi-turn: could be just a number after wage query)
     if intent_result.intent == WorkerIntent.REPORT_WAGE or (
         session.get("fair_wage") and intent_result.reported_wage
@@ -327,6 +380,9 @@ async def chat(
         reply = _handle_report_wage(
             session, intent_result, request.session_id, db, background_tasks
         )
+        if "last_report_id" in session:
+            extracted["report_id"] = session.pop("last_report_id")
+            
         return ChatResponse(
             reply=reply,
             session_id=request.session_id,

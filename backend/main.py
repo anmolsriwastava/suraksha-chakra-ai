@@ -27,6 +27,9 @@ logger = logging.getLogger(__name__)
 settings = get_settings()
 
 
+from sqlalchemy.orm import Session
+from backend.services.vulnerability_scorer import run_full_vulnerability_update
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # startup
@@ -35,6 +38,14 @@ async def lifespan(app: FastAPI):
     logger.info("Database tables ready.")
     get_wage_engine()  # pre-loads FAISS index so first request isn't slow
     logger.info("Wage engine loaded. Ready.")
+    
+    with Session(engine) as db:
+        try:
+            run_full_vulnerability_update(db)
+            logger.info("Predictive layer active. Vulnerability scores populated.")
+        except Exception as e:
+            logger.error(f"Failed to populate predictive layer: {e}")
+            
     yield
     # shutdown (nothing to clean up for now)
     logger.info("Suraksha Chakra shutting down.")

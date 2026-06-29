@@ -34,6 +34,7 @@ build/
 # Data
 data/embeddings/
 
+suraksha.db
 # OS
 .DS_Store
 Thumbs.db

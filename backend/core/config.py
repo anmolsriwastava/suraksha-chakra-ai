@@ -4,6 +4,7 @@ Using pydantic-settings so we get type safety + clear errors
 when something is missing.
 """
 
+from typing import Optional
 from pydantic_settings import BaseSettings
 from functools import lru_cache
 
@@ -18,8 +19,8 @@ class Settings(BaseSettings):
     twilio_account_sid: str = ""
     twilio_auth_token: str = ""
     twilio_whatsapp_number: str = "whatsapp:+14155238886"
-    sendgrid_api_key: str = ""
-    alert_from_email: str = "bsdcc2503@isical.ac.in"
+    sendgrid_api_key: Optional[str] = None
+    alert_from_email: str = "anmol.isik@gmail.com"
 
     # Business logic thresholds
     wage_gap_alert_threshold: int = 5

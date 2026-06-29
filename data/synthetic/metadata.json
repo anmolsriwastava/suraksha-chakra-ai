@@ -1,0 +1,15 @@
+{
+    "description": "Synthetic dataset generated from official statistical priors for prototype development.",
+    "generation_date": "2026-06-28",
+    "rows": {
+        "workers": 100000,
+        "contractors": 10000,
+        "districts": 100
+    },
+    "distributions": {
+        "worker_age": "Truncated Normal(\u03bc=31, \u03c3=9)",
+        "worker_wage": "Log-Normal penalized by Contractor Risk",
+        "contractor_fraud": "Beta(\u03b1=2, \u03b2=8)",
+        "district_features": "Multivariate Normal (Gaussian Copula approximation)"
+    }
+}

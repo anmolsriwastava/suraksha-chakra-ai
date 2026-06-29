@@ -10,12 +10,15 @@ Endpoints for:
 import hashlib
 
 from fastapi import APIRouter, Depends, HTTPException, Header
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 from typing import Optional
 
 from backend.db.database import get_db_session
 from backend.services import contractor_risk as risk_service
+from backend.services.pdf_service import generate_legal_notice_pdf
+from backend.models.models import WageReport
 
 router = APIRouter()
 
@@ -150,3 +153,20 @@ def get_high_risk_contractors(
             for c in contractors
         ]
     }
+
+@router.get("/legal-notice/{report_id}")
+def download_legal_notice(
+    report_id: int,
+    db: Session = Depends(get_db_session)
+):
+    report = db.get(WageReport, report_id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+        
+    pdf_buffer = generate_legal_notice_pdf(report, report.worker_id)
+    
+    return StreamingResponse(
+        pdf_buffer, 
+        media_type="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename=legal_notice_{report_id}.pdf"}
+    )

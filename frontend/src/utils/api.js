@@ -39,29 +39,7 @@ export async function sendChatMessage(message, sessionId = 'demo-user', audioBas
   });
 }
 
-// ── Wages ────────────────────────────────────────────────────────────
 
-export function queryFairWage(occupation, district, state) {
-  return post('/api/wages/query', { occupation, district, state });
-}
-
-export function fetchOccupations() {
-  return get('/api/wages/occupations');
-}
-
-// ── Reports ──────────────────────────────────────────────────────────
-
-export function submitWageReport(payload) {
-  return post('/api/reports/submit', payload);
-}
-
-export function checkContractor(contractorName, district, state) {
-  return post('/api/reports/contractor-check', {
-    contractor_name: contractorName,
-    district,
-    state,
-  });
-}
 
 export function fetchHighRiskContractors(state = null) {
   const qs = state ? `?state=${state}` : '';

@@ -5,6 +5,7 @@ import {
   fetchVulnerabilityScores,
   fetchRecentAlerts,
 } from '../utils/api';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 // ── Helpers ──────────────────────────────────────────────────────────
 
@@ -41,34 +42,7 @@ function Section({ title, children }) {
   );
 }
 
-// ── Mock data fallback (used if backend is not running) ──────────────
-
-const MOCK_OVERVIEW = {
-  total_anonymous_reports: 247,
-  high_risk_contractors: 12,
-  ngo_alerts_sent: 34,
-  average_wage_gap_inr: 198,
-};
-
-const MOCK_CONTRACTORS = [
-  { name: 'Ramesh Constructions', district: 'Delhi', state: 'Delhi', risk_score: 24, total_reports: 18, verified_bad_reports: 15 },
-  { name: 'Sharma Builders', district: 'Noida', state: 'UP', risk_score: 38, total_reports: 11, verified_bad_reports: 9 },
-  { name: 'JP Infrastructure', district: 'Mumbai', state: 'Maharashtra', risk_score: 42, total_reports: 8, verified_bad_reports: 7 },
-  { name: 'Gupta & Sons Labour', district: 'Patna', state: 'Bihar', risk_score: 19, total_reports: 22, verified_bad_reports: 19 },
-];
-
-const MOCK_VULN = [
-  { district: 'Darbhanga', state: 'Bihar', composite_score: 78, disaster_risk: 70, historical_crime_spike: 65, migration_pressure: 80, active_wage_reports: 60, forecast_window_days: 30 },
-  { district: 'Sitamarhi', state: 'Bihar', composite_score: 74, disaster_risk: 72, historical_crime_spike: 60, migration_pressure: 80, active_wage_reports: 40, forecast_window_days: 30 },
-  { district: 'Azamgarh', state: 'UP', composite_score: 62, disaster_risk: 45, historical_crime_spike: 55, migration_pressure: 80, active_wage_reports: 50, forecast_window_days: 30 },
-  { district: 'Muzaffarpur', state: 'Bihar', composite_score: 68, disaster_risk: 65, historical_crime_spike: 58, migration_pressure: 72, active_wage_reports: 45, forecast_window_days: 30 },
-];
-
-const MOCK_ALERTS = [
-  { id: 1, alert_type: 'wage_theft', district: 'Delhi', sent_at: new Date(Date.now() - 3600000).toISOString(), acknowledged: false },
-  { id: 2, alert_type: 'vulnerability_window', district: 'Darbhanga', sent_at: new Date(Date.now() - 86400000).toISOString(), acknowledged: true },
-  { id: 3, alert_type: 'wage_theft', district: 'Patna', sent_at: new Date(Date.now() - 172800000).toISOString(), acknowledged: false },
-];
+// Removed MOCK fallbacks completely as per predictive layer activation requirements.
 
 // ── Dashboard ────────────────────────────────────────────────────────
 
@@ -92,12 +66,12 @@ export default function Dashboard() {
         setContractors(ct.contractors || []);
         setVulnScores(vs.vulnerability_districts || []);
         setAlerts(al.alerts || []);
-      } catch {
-        // backend not running — use mock data for demo
-        setOverview(MOCK_OVERVIEW);
-        setContractors(MOCK_CONTRACTORS);
-        setVulnScores(MOCK_VULN);
-        setAlerts(MOCK_ALERTS);
+      } catch (err) {
+        // backend not running — show empty clean state
+        setOverview({ total_anonymous_reports: 0, high_risk_contractors: 0, ngo_alerts_sent: 0, average_wage_gap_inr: 0 });
+        setContractors([]);
+        setVulnScores([]);
+        setAlerts([]);
       } finally {
         setLoading(false);
       }
@@ -146,6 +120,27 @@ export default function Dashboard() {
           accent="#fbbf24"
         />
       </div>
+
+      {/* Displacement Risk */}
+      <Section title="🚨 Displacement & Trafficking Risk">
+        <p className="text-muted" style={{ marginBottom: '16px' }}>
+          Districts with elevated composite vulnerability have historically experienced increased risks of trafficking and labour exploitation following climate-related displacement.
+        </p>
+        <div className="table-card" style={{ height: '300px', padding: '16px' }}>
+          {vulnScores.length === 0 ? (
+            <div style={{ textAlign: 'center', paddingTop: '100px', color: 'var(--text-muted)' }}>No vulnerability data available</div>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={vulnScores.slice(0, 5).map(v => ({ name: v.district, score: v.composite_score }))}>
+                <XAxis dataKey="name" stroke="#a1a1aa" />
+                <YAxis stroke="#a1a1aa" />
+                <Tooltip />
+                <Bar dataKey="score" fill="#ef4444" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+      </Section>
 
       {/* Contractor risk table */}
       <Section title="🚨 High-Risk Contractors">

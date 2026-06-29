@@ -21,19 +21,15 @@ logger = logging.getLogger(__name__)
 settings = get_settings()
 
 # NGO registry — in production this would be a DB table
-# Hardcoded for prototype / demo
+import os
+DEFAULT_RECIPIENT = os.getenv("ALERT_TO_EMAIL", "anmol972122@gmail.com")
+
 NGO_REGISTRY = {
-    "Delhi": ["delhi-labour@practicalaction.org", "migrant-help-delhi@isst.ac.in"],
-    "Maharashtra": ["workers-mh@aidis.org"],
-    "UP": ["up-migrant@igidr.ac.in"],
-    "Bihar": ["bihar-labour@sewa.org"],
-    "default": ["anmol972122@gmail.com"],
+    "default": [DEFAULT_RECIPIENT],
 }
 
 LABOUR_OFFICER_REGISTRY = {
-    "Delhi": "labour.delhi@nic.in",
-    "Maharashtra": "labour.maharashtra@nic.in",
-    "default": "anmol.isik@gmail.com",
+    "default": DEFAULT_RECIPIENT,
 }
 
 

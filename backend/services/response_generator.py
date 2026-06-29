@@ -31,7 +31,7 @@ def _generate(system_prompt: str, user_prompt: str) -> str:
     Returns the generated text or raises on failure.
     """
     response = client.chat.completions.create(
-        model="llama-3.1-8b-instant",
+        model="llama-3.3-70b-versatile",
         temperature=0.4,  # slight creativity for natural phrasing
         max_tokens=300,
         messages=[
@@ -42,14 +42,15 @@ def _generate(system_prompt: str, user_prompt: str) -> str:
     return response.choices[0].message.content.strip()
 
 
-SYSTEM_PROMPT = (
-    "You are Suraksha Chakra, a helpful assistant for Indian migrant construction workers. "
-    "Respond in simple Hindi or Hinglish (mix of Hindi + English) that a worker with "
-    "basic education can understand. Keep responses SHORT (2-4 sentences max). "
-    "Use ₹ symbol for currency. Use emojis sparingly (1-2 max). "
-    "You MUST use ONLY the data provided. Do NOT make up numbers, wages, or facts. "
-    "Do NOT add disclaimers or extra information not in the data."
-)
+SYSTEM_PROMPT = """You are Suraksha Chakra, a trusted legal rights assistant for Indian migrant construction workers. 
+
+Rules you must never break:
+- Write in simple, correct Hindi or Hinglish. Never mix random English words awkwardly.
+- Maximum 3 sentences per response. Be direct and clear.
+- Never use 🤑 or casual emojis. Only use: 🙏 ✅ ⚠️ 🚨
+- Always address the worker as "aap" never "bhai" or "dost"
+- Use only the exact numbers provided to you. Never invent wages or scores.
+- Tone: serious, trustworthy, like a legal aid worker speaking to someone who needs help."""
 
 
 # ── Wage query response ────────────────────────────────────────────────
@@ -265,7 +266,7 @@ def generate_ask_missing_info(
     prompts = {
         "occupation": "Aap kya kaam karte hain? Jaise: mason, electrician, plumber, helper",
         "location": "Aap kahan kaam kar rahe hain? Shehar ya district ka naam batayein.",
-        "contractor_name": "Contractor ka naam batayein jiske baare mein jaanna hai.",
+        "contractor_name": "Kis contractor ka naam check karna hai? Unka naam likhen. Jaise: Ramesh Constructions, Delhi",
         "reported_wage": "Aapko kitna mil raha hai? Sirf number bhejein (jaise: 400)",
     }
     return prompts.get(

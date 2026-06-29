@@ -38,11 +38,18 @@ function TypingBubble() {
   );
 }
 
-function VoiceBubble({ direction, durationSec = 3 }) {
+function VoiceBubble({ direction, durationSec = 3, audioUrl }) {
   const bars = useRef(randomBars());
+  const handlePlay = () => {
+    if (audioUrl) {
+      const audio = new Audio(audioUrl);
+      audio.play().catch(e => console.error("Error playing audio:", e));
+    }
+  };
+  
   return (
     <div className="voice-bubble">
-      <button className="voice-play-btn">▶</button>
+      <button className="voice-play-btn" onClick={handlePlay}>▶</button>
       <div className="voice-waveform">
         {bars.current.map((h, i) => (
           <div key={i} className="voice-bar" style={{ height: `${h}px` }} />
@@ -62,9 +69,29 @@ function MessageBubble({ msg }) {
     <div className={`bubble-row ${direction}`}>
       <div className={`bubble ${direction}`}>
         {msg.type === 'voice' ? (
-          <VoiceBubble direction={direction} durationSec={msg.duration} />
+          <VoiceBubble direction={direction} durationSec={msg.duration} audioUrl={msg.audioUrl} />
         ) : (
           <p className="bubble-text">{parseBold(msg.text)}</p>
+        )}
+        {msg.reportId && (
+          <a
+            href={`http://localhost:8000/api/reports/legal-notice/${msg.reportId}`}
+            target="_blank"
+            rel="noreferrer"
+            style={{
+              display: 'inline-block',
+              marginTop: '8px',
+              padding: '6px 12px',
+              background: '#ef4444',
+              color: 'white',
+              borderRadius: '6px',
+              textDecoration: 'none',
+              fontSize: '13px',
+              fontWeight: 500
+            }}
+          >
+            📄 Download Legal Notice (PDF)
+          </a>
         )}
         <div className="bubble-meta">{formatTime(msg.timestamp)}</div>
       </div>
@@ -124,6 +151,7 @@ export default function WorkerChat() {
   const [quickReplies, setQuickReplies] = useState(DEFAULT_QUICK_REPLIES);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [sessionId] = useState('demo-user-' + Date.now());
+  const [ttsEnabled, setTtsEnabled] = useState(false);
 
   const listRef = useRef(null);
   const inputRef = useRef(null);
@@ -139,9 +167,20 @@ export default function WorkerChat() {
     }
   }, [messages, isTyping]);
 
+  const speakText = useCallback((text) => {
+    if (!ttsEnabled || !window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = 'hi-IN';
+    window.speechSynthesis.speak(utterance);
+  }, [ttsEnabled]);
+
   const addMessage = useCallback((msg) => {
     setMessages((prev) => [...prev, { ...msg, id: nextId.current++ }]);
-  }, []);
+    if (msg.from === 'bot' && msg.type === 'text') {
+      speakText(msg.text);
+    }
+  }, [speakText]);
 
   // Send text message → hit backend → show reply
   const sendText = useCallback(async (text) => {
@@ -155,7 +194,13 @@ export default function WorkerChat() {
     try {
       const response = await sendChatMessage(text.trim(), sessionId);
       setIsTyping(false);
-      addMessage({ from: 'bot', type: 'text', text: response.reply, timestamp: new Date() });
+      addMessage({ 
+        from: 'bot', 
+        type: 'text', 
+        text: response.reply, 
+        timestamp: new Date(),
+        reportId: response.extracted?.report_id 
+      });
       // Use server-provided quick replies if available, otherwise use defaults
       setQuickReplies(
         response.quick_replies && response.quick_replies.length > 0
@@ -199,12 +244,12 @@ export default function WorkerChat() {
         stream.getTracks().forEach((t) => t.stop());
 
         const duration = recordingSeconds;
-        addMessage({ from: 'user', type: 'voice', duration, timestamp: new Date() });
+        const blob = new Blob(audioChunksRef.current, { type: 'audio/ogg; codecs=opus' });
+        const audioUrl = URL.createObjectURL(blob);
+        
+        addMessage({ from: 'user', type: 'voice', duration, audioUrl, timestamp: new Date() });
         setIsTyping(true);
         setRecordingSeconds(0);
-
-        // Convert audio blob to base64 and send to backend
-        const blob = new Blob(audioChunksRef.current, { type: 'audio/ogg; codecs=opus' });
 
         try {
           const reader = new FileReader();
@@ -221,7 +266,13 @@ export default function WorkerChat() {
           const response = await sendChatMessage('', sessionId, audioBase64);
 
           setIsTyping(false);
-          addMessage({ from: 'bot', type: 'text', text: response.reply, timestamp: new Date() });
+          addMessage({ 
+            from: 'bot', 
+            type: 'text', 
+            text: response.reply, 
+            timestamp: new Date(),
+            reportId: response.extracted?.report_id 
+          });
           setQuickReplies(
             response.quick_replies && response.quick_replies.length > 0
               ? response.quick_replies
@@ -276,10 +327,30 @@ export default function WorkerChat() {
       {/* Top bar */}
       <div className="chat-topbar">
         <div className="chat-topbar-avatar">🛡️</div>
-        <div className="chat-topbar-info">
+        <div className="chat-topbar-info" style={{ flex: 1 }}>
           <h2>Suraksha Chakra</h2>
           <p>● Online — Aapka haq, aapki awaaz</p>
         </div>
+        <button 
+          onClick={() => {
+            setTtsEnabled(!ttsEnabled);
+            if (!ttsEnabled) {
+              const lastBotMsg = [...messages].reverse().find(m => m.from === 'bot');
+              if (lastBotMsg && lastBotMsg.text && window.speechSynthesis) {
+                window.speechSynthesis.cancel();
+                const u = new SpeechSynthesisUtterance(lastBotMsg.text);
+                u.lang = 'hi-IN';
+                window.speechSynthesis.speak(u);
+              }
+            } else {
+              window.speechSynthesis?.cancel();
+            }
+          }}
+          style={{ background: 'transparent', border: 'none', fontSize: '24px', cursor: 'pointer', opacity: ttsEnabled ? 1 : 0.4 }}
+          title={ttsEnabled ? "Speaker On" : "Speaker Off"}
+        >
+          {ttsEnabled ? '🔊' : '🔈'}
+        </button>
       </div>
 
       {/* Message list */}

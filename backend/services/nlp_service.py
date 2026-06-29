@@ -85,6 +85,8 @@ def _build_extraction_prompt(
 {context_section}
 Worker message: "{message}"
 
+Rule for contractor_name: It must be a proper noun — a real business or person name like Ramesh Constructions or Sharma Builders. Words like doosra, koi, woh, contractor, thekedaar are NOT contractor names — set contractor_name to null if no proper noun is found. When extracting contractor_name, take the ENTIRE input as the name if the user is responding to a question asking for contractor name. Do not split on commas. Example: Deen Dayal, Obra → contractor_name is Deen Dayal, Obra. The location after comma is part of the name context, not a separate field.
+
 Respond with this exact JSON structure:
 {{
   "intent": "wage_query" | "report_wage" | "contractor_check" | "help" | "unknown",
@@ -200,6 +202,7 @@ def extract_intent(
             model="llama-3.1-8b-instant",
             temperature=0,
             max_tokens=200,
+            response_format={"type": "json_object"},
             messages=[
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": user_prompt},
