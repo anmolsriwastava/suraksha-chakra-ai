@@ -14,6 +14,14 @@ Output: transcribed text (str)
 import logging
 import tempfile
 import os
+import base64
+from io import BytesIO
+import asyncio
+
+try:
+    from gtts import gTTS
+except ImportError:
+    gTTS = None
 
 import httpx
 from groq import Groq
@@ -102,3 +110,27 @@ async def _transcribe_with_groq(audio_bytes: bytes) -> str:
 
     finally:
         os.unlink(tmp_path)
+
+
+async def generate_tts_audio_base64(text: str, lang: str = "hi") -> str:
+    """
+    Generate TTS using gTTS in a separate thread.
+    Returns a base64 encoded MP3 string.
+    """
+    if not gTTS:
+        logger.warning("gTTS not installed. Skipping TTS generation.")
+        return ""
+
+    def _generate():
+        # Clean text of basic markdown for better pronunciation
+        clean_text = text.replace("*", "").replace("#", "")
+        tts = gTTS(text=clean_text, lang=lang)
+        fp = BytesIO()
+        tts.write_to_fp(fp)
+        return base64.b64encode(fp.getvalue()).decode('utf-8')
+    
+    try:
+        return await asyncio.to_thread(_generate)
+    except Exception as e:
+        logger.error(f"TTS generation failed: {e}")
+        return ""

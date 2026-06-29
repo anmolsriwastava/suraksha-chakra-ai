@@ -26,7 +26,8 @@ from backend.services.wage_engine import get_wage_engine, WageEngine
 from backend.services import contractor_risk as risk_service
 from backend.services import alert_service
 from backend.services import response_generator as responder
-from backend.services.speech_service import transcribe_audio
+from backend.services.response_generator import generate_welcome_response
+from backend.services.speech_service import transcribe_audio, generate_tts_audio_base64
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -46,6 +47,18 @@ class ChatResponse(BaseModel):
     session_id: str
     extracted: Optional[dict] = None  # structured extraction for frontend
     quick_replies: list[str] = []
+    audio_base64: Optional[str] = None
+
+
+async def _create_response(reply: str, session_id: str, extracted: dict = None, quick_replies: list = None) -> ChatResponse:
+    audio = await generate_tts_audio_base64(reply)
+    return ChatResponse(
+        reply=reply,
+        session_id=session_id,
+        extracted=extracted,
+        quick_replies=quick_replies or [],
+        audio_base64=audio
+    )
 
 
 # ── Session management ─────────────────────────────────────────────────
@@ -303,14 +316,14 @@ async def chat(
             logger.info(f"Transcribed audio: {text[:80]}...")
         except Exception as e:
             logger.error(f"Audio transcription failed: {e}")
-            return ChatResponse(
+            return await _create_response(
                 reply="Voice message process nahi ho saka. Please text mein likhen. 🙏",
                 session_id=request.session_id,
                 quick_replies=QUICK_REPLIES["welcome"],
             )
 
     if not text:
-        return ChatResponse(
+        return await _create_response(
             reply=responder.generate_welcome_response(),
             session_id=request.session_id,
             quick_replies=QUICK_REPLIES["welcome"],
@@ -366,7 +379,7 @@ async def chat(
             
             session["last_intent"] = "contractor_check"
             
-            return ChatResponse(
+            return await _create_response(
                 reply=reply,
                 session_id=request.session_id,
                 extracted=extracted,
@@ -383,7 +396,7 @@ async def chat(
         if "last_report_id" in session:
             extracted["report_id"] = session.pop("last_report_id")
             
-        return ChatResponse(
+        return await _create_response(
             reply=reply,
             session_id=request.session_id,
             extracted=extracted,
@@ -392,7 +405,7 @@ async def chat(
 
     if intent_result.intent == WorkerIntent.WAGE_QUERY:
         reply = _handle_wage_query(session, intent_result, wage_engine)
-        return ChatResponse(
+        return await _create_response(
             reply=reply,
             session_id=request.session_id,
             extracted=extracted,
@@ -401,7 +414,7 @@ async def chat(
 
     if intent_result.intent == WorkerIntent.CONTRACTOR_CHECK:
         reply = _handle_contractor_check(session, intent_result, db)
-        return ChatResponse(
+        return await _create_response(
             reply=reply,
             session_id=request.session_id,
             extracted=extracted,
@@ -409,7 +422,7 @@ async def chat(
         )
 
     # Fallback: help / unknown
-    return ChatResponse(
+    return await _create_response(
         reply=responder.generate_welcome_response(intent_result.language),
         session_id=request.session_id,
         extracted=extracted,

@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { sendChatMessage } from '../utils/api';
+import styles from './WorkerChat.module.css';
 
 // ── Helpers ────────────────────────────────────────────────────────────
 
@@ -19,19 +20,19 @@ function parseBold(text) {
 
 // Generate random waveform bars for voice note decoration
 function randomBars(count = 20) {
-  return Array.from({ length: count }, () => Math.random() * 18 + 6);
+  return Array.from({ length: count }, () => Math.random() * 14 + 4);
 }
 
 // ── Sub-components ─────────────────────────────────────────────────────
 
 function TypingBubble() {
   return (
-    <div className="bubble-row incoming">
-      <div className="bubble incoming">
-        <div className="typing-indicator">
-          <div className="typing-dot" />
-          <div className="typing-dot" />
-          <div className="typing-dot" />
+    <div className={`${styles.bubbleRow} ${styles.incoming}`}>
+      <div className={`${styles.bubble} ${styles.incoming}`}>
+        <div className={styles.typingIndicator}>
+          <div className={styles.typingDot} />
+          <div className={styles.typingDot} />
+          <div className={styles.typingDot} />
         </div>
       </div>
     </div>
@@ -48,14 +49,14 @@ function VoiceBubble({ direction, durationSec = 3, audioUrl }) {
   };
   
   return (
-    <div className="voice-bubble">
-      <button className="voice-play-btn" onClick={handlePlay}>▶</button>
-      <div className="voice-waveform">
+    <div className={styles.voiceBubble}>
+      <button className={styles.voicePlayBtn} onClick={handlePlay}>▶</button>
+      <div className={styles.voiceWaveform}>
         {bars.current.map((h, i) => (
-          <div key={i} className="voice-bar" style={{ height: `${h}px` }} />
+          <div key={i} className={styles.voiceBar} style={{ height: `${h}px` }} />
         ))}
       </div>
-      <span style={{ fontSize: 12, opacity: 0.7, minWidth: 28 }}>
+      <span style={{ fontSize: 11, opacity: 0.7, minWidth: 28 }}>
         0:{String(durationSec).padStart(2, '0')}
       </span>
     </div>
@@ -66,34 +67,24 @@ function MessageBubble({ msg }) {
   const direction = msg.from === 'user' ? 'outgoing' : 'incoming';
 
   return (
-    <div className={`bubble-row ${direction}`}>
-      <div className={`bubble ${direction}`}>
+    <div className={`${styles.bubbleRow} ${styles[direction]}`}>
+      <div className={`${styles.bubble} ${styles[direction]}`}>
         {msg.type === 'voice' ? (
           <VoiceBubble direction={direction} durationSec={msg.duration} audioUrl={msg.audioUrl} />
         ) : (
-          <p className="bubble-text">{parseBold(msg.text)}</p>
+          <div className={styles.bubbleText}>{parseBold(msg.text)}</div>
         )}
         {msg.reportId && (
           <a
             href={`http://localhost:8000/api/reports/legal-notice/${msg.reportId}`}
             target="_blank"
             rel="noreferrer"
-            style={{
-              display: 'inline-block',
-              marginTop: '8px',
-              padding: '6px 12px',
-              background: '#ef4444',
-              color: 'white',
-              borderRadius: '6px',
-              textDecoration: 'none',
-              fontSize: '13px',
-              fontWeight: 500
-            }}
+            className={styles.noticeBtn}
           >
             📄 Download Legal Notice (PDF)
           </a>
         )}
-        <div className="bubble-meta">{formatTime(msg.timestamp)}</div>
+        <div className={styles.bubbleMeta}>{formatTime(msg.timestamp)}</div>
       </div>
     </div>
   );
@@ -102,11 +93,11 @@ function MessageBubble({ msg }) {
 function QuickReplies({ chips, onSelect }) {
   if (!chips || chips.length === 0) return null;
   return (
-    <div className="quick-replies">
+    <div className={styles.quickReplies}>
       {chips.map((chip) => (
         <button
           key={chip}
-          className="quick-reply-chip"
+          className={styles.quickReplyChip}
           onClick={() => onSelect(chip)}
         >
           {chip}
@@ -151,13 +142,13 @@ export default function WorkerChat() {
   const [quickReplies, setQuickReplies] = useState(DEFAULT_QUICK_REPLIES);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [sessionId] = useState('demo-user-' + Date.now());
-  const [ttsEnabled, setTtsEnabled] = useState(false);
 
   const listRef = useRef(null);
   const inputRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const recordingTimerRef = useRef(null);
+  const recordingStartRef = useRef(null);
   const nextId = useRef(1);
 
   // Auto-scroll to bottom on new messages
@@ -167,20 +158,9 @@ export default function WorkerChat() {
     }
   }, [messages, isTyping]);
 
-  const speakText = useCallback((text) => {
-    if (!ttsEnabled || !window.speechSynthesis) return;
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = 'hi-IN';
-    window.speechSynthesis.speak(utterance);
-  }, [ttsEnabled]);
-
   const addMessage = useCallback((msg) => {
     setMessages((prev) => [...prev, { ...msg, id: nextId.current++ }]);
-    if (msg.from === 'bot' && msg.type === 'text') {
-      speakText(msg.text);
-    }
-  }, [speakText]);
+  }, []);
 
   // Send text message → hit backend → show reply
   const sendText = useCallback(async (text) => {
@@ -201,6 +181,15 @@ export default function WorkerChat() {
         timestamp: new Date(),
         reportId: response.extracted?.report_id 
       });
+      if (response.audio_base64) {
+        addMessage({
+          from: 'bot',
+          type: 'voice',
+          audioUrl: `data:audio/mp3;base64,${response.audio_base64}`,
+          duration: Math.max(1, Math.round(response.reply.length / 15)),
+          timestamp: new Date(),
+        });
+      }
       // Use server-provided quick replies if available, otherwise use defaults
       setQuickReplies(
         response.quick_replies && response.quick_replies.length > 0
@@ -243,7 +232,7 @@ export default function WorkerChat() {
       recorder.onstop = async () => {
         stream.getTracks().forEach((t) => t.stop());
 
-        const duration = recordingSeconds;
+        const duration = recordingStartRef.current ? Math.max(1, Math.round((Date.now() - recordingStartRef.current) / 1000)) : recordingSeconds;
         const blob = new Blob(audioChunksRef.current, { type: 'audio/ogg; codecs=opus' });
         const audioUrl = URL.createObjectURL(blob);
         
@@ -273,6 +262,15 @@ export default function WorkerChat() {
             timestamp: new Date(),
             reportId: response.extracted?.report_id 
           });
+          if (response.audio_base64) {
+            addMessage({
+              from: 'bot',
+              type: 'voice',
+              audioUrl: `data:audio/mp3;base64,${response.audio_base64}`,
+              duration: Math.max(1, Math.round(response.reply.length / 15)),
+              timestamp: new Date(),
+            });
+          }
           setQuickReplies(
             response.quick_replies && response.quick_replies.length > 0
               ? response.quick_replies
@@ -290,6 +288,7 @@ export default function WorkerChat() {
       };
 
       mediaRecorderRef.current = recorder;
+      recordingStartRef.current = Date.now();
       recorder.start();
       setIsRecording(true);
 
@@ -323,39 +322,19 @@ export default function WorkerChat() {
   };
 
   return (
-    <div className="chat-screen">
+    <div className={styles.chatScreen}>
       {/* Top bar */}
-      <div className="chat-topbar">
-        <div className="chat-topbar-avatar">🛡️</div>
-        <div className="chat-topbar-info" style={{ flex: 1 }}>
-          <h2>Suraksha Chakra</h2>
-          <p>● Online — Aapka haq, aapki awaaz</p>
+      <div className={styles.topbar}>
+        <div className={styles.avatar}>🛡️</div>
+        <div className={styles.topbarInfo}>
+          <h2>Suraksha Chakra AI</h2>
+          <p><span className={styles.onlineDot}></span> Online • Protecting Workers</p>
         </div>
-        <button 
-          onClick={() => {
-            setTtsEnabled(!ttsEnabled);
-            if (!ttsEnabled) {
-              const lastBotMsg = [...messages].reverse().find(m => m.from === 'bot');
-              if (lastBotMsg && lastBotMsg.text && window.speechSynthesis) {
-                window.speechSynthesis.cancel();
-                const u = new SpeechSynthesisUtterance(lastBotMsg.text);
-                u.lang = 'hi-IN';
-                window.speechSynthesis.speak(u);
-              }
-            } else {
-              window.speechSynthesis?.cancel();
-            }
-          }}
-          style={{ background: 'transparent', border: 'none', fontSize: '24px', cursor: 'pointer', opacity: ttsEnabled ? 1 : 0.4 }}
-          title={ttsEnabled ? "Speaker On" : "Speaker Off"}
-        >
-          {ttsEnabled ? '🔊' : '🔈'}
-        </button>
       </div>
 
       {/* Message list */}
-      <div className="message-list" ref={listRef}>
-        <div className="date-divider"><span>Aaj</span></div>
+      <div className={styles.messageList} ref={listRef}>
+        <div className={styles.dateDivider}><span>Today</span></div>
 
         {messages.map((msg) => (
           <MessageBubble key={msg.id} msg={msg} />
@@ -368,34 +347,41 @@ export default function WorkerChat() {
       <QuickReplies chips={quickReplies} onSelect={sendText} />
 
       {/* Input bar */}
-      <div className="input-bar">
-        <button
-          className={`input-icon-btn mic-btn ${isRecording ? 'recording' : ''}`}
-          onClick={handleMicClick}
-          title={isRecording ? `Recording… ${recordingSeconds}s (tap to stop)` : 'Voice message'}
-        >
-          {isRecording ? '⏹' : '🎤'}
-        </button>
+      <div className={styles.inputBar}>
+        <button className={styles.iconBtn} title="Attach" style={{ fontSize: '26px' }}>＋</button>
+        <button className={styles.iconBtn} title="Emoji">😊</button>
+        
+        <div className={styles.inputWrapper}>
+          <textarea
+            ref={inputRef}
+            className={styles.inputField}
+            rows={1}
+            placeholder="Type a message"
+            value={inputText}
+            onChange={(e) => setInputText(e.target.value)}
+            onKeyDown={handleKeyDown}
+            disabled={isRecording}
+          />
+        </div>
 
-        <textarea
-          ref={inputRef}
-          className="input-field"
-          rows={1}
-          placeholder="Yahan likhen… (Hindi ya Hinglish)"
-          value={inputText}
-          onChange={(e) => setInputText(e.target.value)}
-          onKeyDown={handleKeyDown}
-          disabled={isRecording}
-        />
-
-        <button
-          className="input-icon-btn send-btn"
-          onClick={handleSend}
-          disabled={!inputText.trim() || isRecording}
-          title="Bhejein"
-        >
-          ➤
-        </button>
+        {inputText.trim() ? (
+          <button
+            className={`${styles.actionBtn} ${styles.sendBtn}`}
+            onClick={handleSend}
+            disabled={isRecording}
+            title="Send"
+          >
+            ➤
+          </button>
+        ) : (
+          <button
+            className={`${styles.actionBtn} ${styles.micBtn} ${isRecording ? styles.recording : ''}`}
+            onClick={handleMicClick}
+            title={isRecording ? `Recording... ${recordingSeconds}s` : 'Voice Message'}
+          >
+            {isRecording ? '⏹' : '🎤'}
+          </button>
+        )}
       </div>
     </div>
   );

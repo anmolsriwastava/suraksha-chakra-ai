@@ -148,7 +148,7 @@ async def _handle_report_wage(
 
     # save the report
     state = location.split(",")[-1].strip() if "," in location else location
-    _ = risk_service.record_wage_report(
+    report = risk_service.record_wage_report(
         db=db,
         worker_id=phone_hash,
         contractor_id=contractor_id,
@@ -174,17 +174,24 @@ async def _handle_report_wage(
     session["fair_wage"] = None
     session["pending_occupation"] = None
     session["pending_contractor_id"] = None
+    session["last_intent"] = "report_wage"
+    
+    is_wage_theft = wage_gap > 0 and gap_percent > 50
 
-    if wage_gap > 0 and gap_percent > 10:
-        return (
+    if is_wage_theft:
+        base_reply = (
             f"🚨 *Aapka report save ho gaya (anonymously).*\n\n"
             f"Fair wage: ₹{fair_wage:.0f}/day\n"
             f"Aapko mila: ₹{reported_wage:.0f}/day\n"
             f"Farq: ₹{wage_gap:.0f} ({gap_percent:.0f}% kam)\n\n"
             f"Yeh information related NGO aur labour officer ko bhej di gayi hai. "
-            f"Aapki identity poori tarah safe hai.\n\n"
-            f"Doosre workers ke liye contractor ka naam bhi share kar sakte hain."
+            f"Aapki identity poori tarah safe hai."
         )
+        if contractor_id:
+            legal_notice_url = f"https://zippy-preacher-stingy.ngrok-free.dev/api/reports/legal-notice/{report.id}"
+            return f"{base_reply}\n\n📄 Download Legal Notice (PDF):\n{legal_notice_url}"
+        else:
+            return f"{base_reply}\n\nContractor ka naam pata hai? Batayein toh legal notice generate kar sakte hain."
     else:
         return (
             f"✅ *Report save ho gayi.*\n"
@@ -225,6 +232,27 @@ async def whatsapp_webhook(
     # extract what they want
     intent_result = extract_intent(text)
     logger.info(f"Intent: {intent_result.intent}")
+
+    if session.get("last_intent") == "report_wage" and intent_result.contractor_name and intent_result.intent != WorkerIntent.WAGE_QUERY:
+        from backend.models.models import WageReport, ContractorRisk
+        last_report = db.query(WageReport).filter(WageReport.worker_id == phone_hash).order_by(WageReport.reported_at.desc()).first()
+        if last_report:
+            district = last_report.district or ""
+            state = last_report.state or ""
+            contractor = risk_service.find_or_create_contractor(db, intent_result.contractor_name, district, state)
+            last_report.contractor_id = contractor.id
+            db.commit()
+            
+            if risk_service.should_trigger_ngo_alert(db, contractor.id):
+                contractor_db = db.get(ContractorRisk, contractor.id)
+                background_tasks.add_task(
+                    alert_service.send_wage_theft_alert,
+                    db, contractor_db, contractor_db.verified_bad_reports, district, state
+                )
+                
+            session["last_intent"] = "contractor_check"
+            legal_notice_url = f"https://zippy-preacher-stingy.ngrok-free.dev/api/reports/legal-notice/{last_report.id}"
+            return f"✅ Contractor {intent_result.contractor_name} ka naam record ho gaya hai.\n\n📄 Download Legal Notice (PDF):\n{legal_notice_url}"
 
     # handle wage reporting (multi-turn: could be just a number)
     if intent_result.intent == WorkerIntent.REPORT_WAGE or (

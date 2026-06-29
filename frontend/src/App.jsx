@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import WorkerChat from './pages/WorkerChat';
 import Dashboard from './pages/Dashboard';
+import KycModal from './pages/KycModal';
 
 const NAV = [
   { id: 'chat', icon: '💬', label: 'Worker Bot' },
@@ -9,9 +10,12 @@ const NAV = [
 
 export default function App() {
   const [activeView, setActiveView] = useState('chat');
+  const [isKycVerified, setIsKycVerified] = useState(false);
 
   return (
-    <div className="app-shell">
+    <>
+      {!isKycVerified && <KycModal onVerify={() => setIsKycVerified(true)} />}
+      <div className="app-shell" style={{ filter: !isKycVerified ? 'blur(4px)' : 'none', transition: 'filter 0.3s' }}>
       {/* Sidebar */}
       <nav className="sidebar">
         <div className="sidebar-logo">🛡️</div>
@@ -33,5 +37,6 @@ export default function App() {
         {activeView === 'dashboard' && <Dashboard />}
       </div>
     </div>
+    </>
   );
 }
