@@ -40,6 +40,7 @@ class WageQueryResult:
 
 
 class WageEngine:
+    def __init__(self):
         from langchain_groq import ChatGroq
         
         self.vector_store = None
