@@ -4,11 +4,12 @@ Suraksha Chakra — FastAPI Application
 Startup order:
 1. Load env config
 2. Init DB (create tables if needed)
-3. Load wage engine (FAISS index)
+3. Load wage engine (FAISS index) — in background
 4. Mount routers
 """
 
 import logging
+import threading
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -16,7 +17,6 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from backend.core.config import get_settings
 from backend.db.database import engine, Base
-from backend.services.wage_engine import get_wage_engine
 from backend.api import whatsapp, wages, reports, dashboard, chat
 
 logging.basicConfig(
@@ -27,27 +27,38 @@ logger = logging.getLogger(__name__)
 settings = get_settings()
 
 
-from sqlalchemy.orm import Session
-from backend.services.vulnerability_scorer import run_full_vulnerability_update
+def _heavy_init():
+    """Run heavy initialization in a background thread so the port opens fast."""
+    try:
+        from backend.services.wage_engine import get_wage_engine
+        get_wage_engine()
+        logger.info("Wage engine loaded.")
+    except Exception as e:
+        logger.error(f"Wage engine init failed: {e}")
+
+    try:
+        from sqlalchemy.orm import Session
+        from backend.services.vulnerability_scorer import run_full_vulnerability_update
+        with Session(engine) as db:
+            run_full_vulnerability_update(db)
+            logger.info("Vulnerability scores populated.")
+    except Exception as e:
+        logger.error(f"Vulnerability scorer failed: {e}")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # startup
+    # startup — keep it fast so Render detects the port
     logger.info("Starting Suraksha Chakra...")
     Base.metadata.create_all(bind=engine)
     logger.info("Database tables ready.")
-    get_wage_engine()  # pre-loads FAISS index so first request isn't slow
-    logger.info("Wage engine loaded. Ready.")
+
+    # Heavy ML loading in background thread
+    init_thread = threading.Thread(target=_heavy_init, daemon=True)
+    init_thread.start()
+    logger.info("Background initialization started. Server is ready.")
     
-    with Session(engine) as db:
-        try:
-            run_full_vulnerability_update(db)
-            logger.info("Predictive layer active. Vulnerability scores populated.")
-        except Exception as e:
-            logger.error(f"Failed to populate predictive layer: {e}")
-            
     yield
-    # shutdown (nothing to clean up for now)
     logger.info("Suraksha Chakra shutting down.")
 
 
@@ -60,7 +71,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # tighten in production
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
