@@ -15,13 +15,8 @@ import logging
 from pathlib import Path
 from dataclasses import dataclass
 
-from langchain_community.document_loaders import PyPDFLoader
-from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_community.vectorstores import FAISS
-from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_groq import ChatGroq
-from langchain_classic.chains import RetrievalQA
-from langchain_core.prompts import PromptTemplate
+# Lazy load langchain inside the class to prevent slow module-level imports
+# that cause Render port timeouts.
 
 from backend.core.config import get_settings
 
@@ -41,45 +36,23 @@ class WageQueryResult:
     confidence: str = "high"  # high | medium | low
 
 
-# Prompt that forces the LLM to return structured JSON
-WAGE_QUERY_PROMPT = PromptTemplate(
-    input_variables=["context", "question"],
-    template="""
-You are an expert on Indian labour law and BOCW wage schedules.
-Use ONLY the context below to answer. Do not make up numbers.
 
-Context:
-{context}
-
-Question: {question}
-
-Respond in this exact JSON format (no extra text):
-{{
-  "fair_wage_min": <number or null>,
-  "fair_wage_max": <number or null>,
-  "per": "day",
-  "source": "<which document/state schedule>",
-  "confidence": "high" | "medium" | "low",
-  "note": "<any important caveat>"
-}}
-
-If the context does not contain enough info, set confidence to "low"
-and set fair_wage_min/max to null.
-"""
-)
 
 
 class WageEngine:
     def __init__(self):
+        from langchain_huggingface import HuggingFaceEmbeddings
+        from langchain_groq import ChatGroq
+        
         self.vector_store = None
         self.qa_chain = None
         self.embeddings = HuggingFaceEmbeddings(
-        model_name="sentence-transformers/all-MiniLM-L6-v2"
+            model_name="sentence-transformers/all-MiniLM-L6-v2"
         )
         self.llm = ChatGroq(
-        groq_api_key=settings.groq_api_key,
-        model_name="llama-3.1-8b-instant",
-        temperature=0
+            groq_api_key=settings.groq_api_key,
+            model_name="llama-3.1-8b-instant",
+            temperature=0
         )
         self._embeddings_path = Path(settings.embeddings_dir) / "wage_index"
 
@@ -88,6 +61,8 @@ class WageEngine:
         Load the FAISS index from disk if it exists, otherwise
         build it fresh from all PDFs in data/raw/.
         """
+        from langchain_community.vectorstores import FAISS
+        
         if self._embeddings_path.exists():
             logger.info("Loading existing FAISS wage index from disk...")
             self.vector_store = FAISS.load_local(
@@ -107,6 +82,8 @@ class WageEngine:
         Walk data/raw/ and load every PDF we find.
         Returns a flat list of LangChain Document objects.
         """
+        from langchain_community.document_loaders import PyPDFLoader
+        
         raw_dir = Path(settings.raw_data_dir)
         all_docs = []
 
@@ -116,14 +93,14 @@ class WageEngine:
             return []
 
         for pdf_path in pdf_files:
+            logger.info(f"Loading {pdf_path.name}...")
             try:
                 loader = PyPDFLoader(str(pdf_path))
                 docs = loader.load()
                 # tag each doc with its source file
                 for doc in docs:
-                    doc.metadata["source_file"] = pdf_path.name
+                    doc.metadata["source_file"] = pdf_path.stem
                 all_docs.extend(docs)
-                logger.info(f"Loaded {len(docs)} pages from {pdf_path.name}")
             except Exception as e:
                 # skip corrupt PDFs, don't crash everything
                 logger.error(f"Failed to load {pdf_path.name}: {e}")
@@ -135,6 +112,8 @@ class WageEngine:
         Split docs into chunks suitable for embedding.
         Smaller chunks = more precise retrieval for wage tables.
         """
+        from langchain_text_splitters import RecursiveCharacterTextSplitter
+        
         splitter = RecursiveCharacterTextSplitter(
             chunk_size=600,
             chunk_overlap=80,
@@ -146,6 +125,8 @@ class WageEngine:
 
     def _build_index_from_pdfs(self):
         """Build FAISS index and save to disk."""
+        from langchain_community.vectorstores import FAISS
+        
         documents = self._load_all_pdfs()
 
         if not documents:
@@ -155,7 +136,13 @@ class WageEngine:
             return
 
         chunks = self._split_into_chunks(documents)
-        self.vector_store = FAISS.from_documents(chunks, self.embeddings)
+        
+        if not chunks:
+            logger.info("No chunks to embed. Creating empty fallback index.")
+            self.vector_store = self._build_fallback_index()
+        else:
+            logger.info(f"Embedding {len(chunks)} chunks using HuggingFace...")
+            self.vector_store = FAISS.from_documents(chunks, self.embeddings)
 
         # save so we don't re-embed on every restart
         self._embeddings_path.mkdir(parents=True, exist_ok=True)
@@ -164,6 +151,7 @@ class WageEngine:
 
     def _build_fallback_index(self):
         from langchain_core.documents import Document
+        from langchain_community.vectorstores import FAISS
         
         wage_data = [
             # Delhi
@@ -201,6 +189,35 @@ class WageEngine:
 
     def _setup_qa_chain(self):
         """Attach a RetrievalQA chain to the vector store."""
+        from langchain_classic.chains import RetrievalQA
+        from langchain_core.prompts import PromptTemplate
+        
+        WAGE_QUERY_PROMPT = PromptTemplate(
+            input_variables=["context", "question"],
+            template="""
+        You are an expert on Indian labour law and BOCW wage schedules.
+        Use ONLY the context below to answer. Do not make up numbers.
+        
+        Context:
+        {context}
+        
+        Question: {question}
+        
+        Respond in this exact JSON format (no extra text):
+        {{
+          "fair_wage_min": <number or null>,
+          "fair_wage_max": <number or null>,
+          "per": "day",
+          "source": "<which document/state schedule>",
+          "confidence": "high" | "medium" | "low",
+          "note": "<any important caveat>"
+        }}
+        
+        If the context does not contain enough info, set confidence to "low"
+        and set fair_wage_min/max to null.
+        """
+        )
+        
         retriever = self.vector_store.as_retriever(
             search_type="similarity",
             search_kwargs={"k": 4}  # top 4 chunks should be enough for wage lookup
