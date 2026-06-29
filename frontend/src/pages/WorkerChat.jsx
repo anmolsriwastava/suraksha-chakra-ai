@@ -41,20 +41,63 @@ function TypingBubble() {
 
 function VoiceBubble({ direction, durationSec = 3, audioUrl }) {
   const bars = useRef(randomBars());
-  const handlePlay = () => {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const audioRef = useRef(null);
+
+  useEffect(() => {
     if (audioUrl) {
       const audio = new Audio(audioUrl);
-      audio.play().catch(e => console.error("Error playing audio:", e));
+      audio.playbackRate = 1.25;
+      audio.onplay = () => setIsPlaying(true);
+      audio.onpause = () => setIsPlaying(false);
+      audio.onended = () => {
+        setIsPlaying(false);
+        setProgress(0);
+      };
+      audio.ontimeupdate = () => {
+        if (audio.duration) {
+          setProgress(audio.currentTime / audio.duration);
+        }
+      };
+      audioRef.current = audio;
+    }
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, [audioUrl]);
+
+  const togglePlay = () => {
+    if (!audioRef.current) return;
+    if (isPlaying) {
+      audioRef.current.pause();
+    } else {
+      audioRef.current.play().catch(e => console.error("Error playing audio:", e));
     }
   };
   
   return (
     <div className={styles.voiceBubble}>
-      <button className={styles.voicePlayBtn} onClick={handlePlay}>▶</button>
+      <button className={styles.voicePlayBtn} onClick={togglePlay}>
+        {isPlaying ? '⏸' : '▶'}
+      </button>
       <div className={styles.voiceWaveform}>
-        {bars.current.map((h, i) => (
-          <div key={i} className={styles.voiceBar} style={{ height: `${h}px` }} />
-        ))}
+        {bars.current.map((h, i) => {
+          const isPlayed = i / bars.current.length <= progress;
+          return (
+            <div 
+              key={i} 
+              className={styles.voiceBar} 
+              style={{ 
+                height: `${h}px`,
+                backgroundColor: isPlayed ? (direction === 'outgoing' ? '#128C7E' : '#25D366') : '#9CA3AF'
+              }} 
+            />
+          );
+        })}
       </div>
       <span style={{ fontSize: 11, opacity: 0.7, minWidth: 28 }}>
         0:{String(durationSec).padStart(2, '0')}
@@ -127,7 +170,7 @@ Voice message bhi bhej sakte hain! 🎤`,
 };
 
 const DEFAULT_QUICK_REPLIES = [
-  'Delhi mein mason ka kaam mila',
+  'Delhi mein raaj mistri ka kaam mila',
   'Mumbai mein electrician hoon',
   'Contractor check karna hai',
 ];

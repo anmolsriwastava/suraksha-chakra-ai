@@ -126,7 +126,7 @@ async def _handle_report_wage(
     if not fair_wage or not occupation:
         return (
             "Pehle apna occupation aur location batayein. "
-            "Jaise: 'Delhi mein mason ka kaam mila hai'"
+            "Jaise: 'Delhi mein raaj mistri ka kaam mila hai'"
         )
 
     wage_gap = fair_wage - reported_wage
@@ -297,9 +297,9 @@ async def whatsapp_webhook(
     # fallback
     return (
         "Namaste! Main aapki madad kar sakta hoon:\n\n"
-        "1️⃣ Fair wage jaanne ke liye: *'Delhi mein mason ka kaam mila'*\n"
-        "2️⃣ Contractor check ke liye: *'Ramesh Constructions ke baare mein batao'*\n"
-        "3️⃣ Wage report ke liye: apna actual wage number bhejein\n\n"
+        "1️⃣ Fair wage jaanne ke liye: *'Delhi mein raaj mistri ka kaam mila'*\n"
+        "2️⃣ Contractor check karne ke liye: *'Ramesh Constructions kaisa hai?'*\n"
+        "3️⃣ Wage report karne ke liye: *'Mujhe 400 mil raha hai'*\n\n"
         "Aap Hindi ya Hinglish mein baat kar sakte hain. "
         "Voice message bhi bhej sakte hain! 🎤"
     )

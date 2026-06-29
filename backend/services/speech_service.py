@@ -114,23 +114,33 @@ async def _transcribe_with_groq(audio_bytes: bytes) -> str:
 
 async def generate_tts_audio_base64(text: str, lang: str = "hi") -> str:
     """
-    Generate TTS using gTTS in a separate thread.
+    Generate TTS using Microsoft Edge TTS (free, high quality).
+    Uses a fluent Hindi male voice (Madhur).
     Returns a base64 encoded MP3 string.
     """
-    if not gTTS:
-        logger.warning("gTTS not installed. Skipping TTS generation.")
+    try:
+        import edge_tts
+    except ImportError:
+        logger.warning("edge-tts not installed. Skipping TTS generation.")
         return ""
 
-    def _generate():
+    async def _generate():
         # Clean text of basic markdown for better pronunciation
-        clean_text = text.replace("*", "").replace("#", "")
-        tts = gTTS(text=clean_text, lang=lang)
+        clean_text = text.replace("*", "").replace("#", "").replace("_", "")
+        
+        # Hindi male voice — natural and fluent
+        voice = "hi-IN-MadhurNeural"
+        
+        communicate = edge_tts.Communicate(clean_text, voice)
         fp = BytesIO()
-        tts.write_to_fp(fp)
+        async for chunk in communicate.stream():
+            if chunk["type"] == "audio":
+                fp.write(chunk["data"])
         return base64.b64encode(fp.getvalue()).decode('utf-8')
     
     try:
-        return await asyncio.to_thread(_generate)
+        return await _generate()
     except Exception as e:
         logger.error(f"TTS generation failed: {e}")
         return ""
+

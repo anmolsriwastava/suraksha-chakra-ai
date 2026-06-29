@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: suraksha-chakra-ai
+    runtime: python
+    plan: starter  # $7/mo — needed for torch/ML deps (free tier has 512MB limit)
+    buildCommand: |
+      pip install -r backend/requirements.txt &&
+      cd frontend && npm install && npm run build
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      - key: NODE_VERSION
+        value: "20"
+      - key: GROQ_API_KEY
+        sync: false  # set manually in Render dashboard
+      - key: SARVAM_API_KEY
+        sync: false
+      - key: SENDGRID_API_KEY
+        sync: false
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false

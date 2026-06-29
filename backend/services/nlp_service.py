@@ -85,7 +85,12 @@ def _build_extraction_prompt(
 {context_section}
 Worker message: "{message}"
 
-Rule for contractor_name: It must be a proper noun — a real business or person name like Ramesh Constructions or Sharma Builders. Words like doosra, koi, woh, contractor, thekedaar are NOT contractor names — set contractor_name to null if no proper noun is found. When extracting contractor_name, take the ENTIRE input as the name if the user is responding to a question asking for contractor name. Do not split on commas. Example: Deen Dayal, Obra → contractor_name is Deen Dayal, Obra. The location after comma is part of the name context, not a separate field.
+CRITICAL RULES for contractor_name:
+1. contractor_name must be a REAL proper noun — a person name or business name like "Ramesh Constructions", "Sharma Builders", "JP Infrastructure". 
+2. Generic words like doosra, koi, woh, contractor, thekedaar, naam, batana, check, haan are NEVER contractor names → set contractor_name to null.
+3. If the user says they WANT to check a contractor but has NOT given the name yet, set contractor_name to null. Example: "Contractor ka naam batana hai" → contractor_name is null.
+4. "raaj mistri" or "rajmistri" is an OCCUPATION (mason). It is NEVER a contractor_name.
+5. When the user IS responding with a real name (e.g. answering the question "Contractor ka naam batayein"), take the full input as the contractor_name. Example: "Deen Dayal, Obra" → contractor_name is "Deen Dayal, Obra".
 
 Respond with this exact JSON structure:
 {{
@@ -93,18 +98,20 @@ Respond with this exact JSON structure:
   "occupation": "<job type in English: mason, electrician, plumber, helper, carpenter, painter, welder, driver, or null>",
   "location_district": "<district/city name in English, e.g. Delhi, Mumbai, Patna, or null>",
   "location_state": "<state name in English, e.g. Delhi, Maharashtra, UP, Bihar, or null>",
-  "contractor_name": "<contractor or company name as mentioned, or null>",
+  "contractor_name": "<contractor or company PROPER NAME as mentioned, or null>",
   "reported_wage": <number (daily wage in INR) or null>,
   "language": "hi" | "en"
 }}
 
 Examples:
-- "Delhi mein mason ka kaam mila hai" → {{"intent":"wage_query","occupation":"mason","location_district":"Delhi","location_state":"Delhi","contractor_name":null,"reported_wage":null,"language":"hi"}}
+- "Delhi mein raaj mistri ka kaam mila hai" → {{"intent":"wage_query","occupation":"mason","location_district":"Delhi","location_state":"Delhi","contractor_name":null,"reported_wage":null,"language":"hi"}}
 - "Mumbai mein electrician hoon" → {{"intent":"wage_query","occupation":"electrician","location_district":"Mumbai","location_state":"Maharashtra","contractor_name":null,"reported_wage":null,"language":"hi"}}
 - "Mujhe 400 rupaye mil rahe hain" → {{"intent":"report_wage","occupation":null,"location_district":null,"location_state":null,"contractor_name":null,"reported_wage":400,"language":"hi"}}
 - "500" → {{"intent":"report_wage","occupation":null,"location_district":null,"location_state":null,"contractor_name":null,"reported_wage":500,"language":"hi"}}
 - "Ramesh Constructions ke baare mein batao" → {{"intent":"contractor_check","occupation":null,"location_district":null,"location_state":null,"contractor_name":"Ramesh Constructions","reported_wage":null,"language":"hi"}}
 - "JP Infrastructure ka kya scene hai?" → {{"intent":"contractor_check","occupation":null,"location_district":null,"location_state":null,"contractor_name":"JP Infrastructure","reported_wage":null,"language":"hi"}}
+- "Contractor ka naam batana hai" → {{"intent":"contractor_check","occupation":null,"location_district":null,"location_state":null,"contractor_name":null,"reported_wage":null,"language":"hi"}}
+- "Contractor check karna hai" → {{"intent":"contractor_check","occupation":null,"location_district":null,"location_state":null,"contractor_name":null,"reported_wage":null,"language":"hi"}}
 - "Kya karna chahiye?" → {{"intent":"help","occupation":null,"location_district":null,"location_state":null,"contractor_name":null,"reported_wage":null,"language":"hi"}}
 - "What is the wage for a plumber in Patna?" → {{"intent":"wage_query","occupation":"plumber","location_district":"Patna","location_state":"Bihar","contractor_name":null,"reported_wage":null,"language":"en"}}
 - "Gorakhpur mein helper ka kitna milta hai" → {{"intent":"wage_query","occupation":"helper","location_district":"Gorakhpur","location_state":"UP","contractor_name":null,"reported_wage":null,"language":"hi"}}
@@ -199,7 +206,7 @@ def extract_intent(
         )
 
         response = client.chat.completions.create(
-            model="llama-3.1-8b-instant",
+            model="llama-3.3-70b-versatile",
             temperature=0,
             max_tokens=200,
             response_format={"type": "json_object"},
@@ -254,7 +261,7 @@ def _fallback_keyword_extraction(text: str) -> ExtractedIntent:
     text_lower = text.lower()
 
     occupation_map = {
-        "mason": ["mason", "rajmistri", "राजमिस्त्री"],
+        "mason": ["mason", "rajmistri", "raaj mistri", "राजमिस्त्री"],
         "electrician": ["electrician", "bijli", "बिजली"],
         "plumber": ["plumber", "plumber"],
         "helper": ["helper", "mazdoor", "मजदूर", "unskilled"],

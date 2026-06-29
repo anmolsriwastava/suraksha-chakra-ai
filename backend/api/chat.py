@@ -89,7 +89,7 @@ def _hash_phone(session_id: str) -> str:
 
 QUICK_REPLIES = {
     "welcome": [
-        "Delhi mein mason ka kaam mila",
+        "Delhi mein raaj mistri ka kaam mila",
         "Mumbai mein electrician hoon",
         "Contractor ka naam check karna hai",
     ],
@@ -160,11 +160,20 @@ def _handle_contractor_check(
 ) -> str:
     """Check contractor risk and generate response."""
     contractor_name = intent_result.contractor_name
-    invalid_names = {'doosra', 'koi', 'woh', 'contractor', 'thekedaar', 'thekedar', 'ek', 'us'}
+    # Expanded blocklist: common Hindi/Hinglish filler words that are NOT real names
+    invalid_names = {
+        'doosra', 'koi', 'woh', 'contractor', 'thekedaar', 'thekedar',
+        'ek', 'us', 'naam', 'batana', 'batao', 'check', 'haan', 'ha',
+        'nahi', 'karna', 'hai', 'ka', 'ki', 'ke', 'mein', 'se',
+        'raaj mistri', 'rajmistri', 'mason', 'electrician', 'plumber',
+        'helper', 'carpenter', 'painter', 'welder', 'driver',
+    }
     
     if (not contractor_name or not contractor_name.strip() or 
         len(contractor_name.strip()) < 4 or 
-        contractor_name.strip().lower() in invalid_names):
+        contractor_name.strip().lower() in invalid_names or
+        # Block if name is just common Hindi words (no proper noun detected)
+        all(word.lower() in invalid_names for word in contractor_name.strip().split())):
         return responder.generate_ask_missing_info("contractor_name")
 
     district = intent_result.location_district or session.get("pending_location", "")
@@ -213,7 +222,7 @@ def _handle_report_wage(
     if not fair_wage or not occupation:
         return (
             "Pehle apna occupation aur location batayein. "
-            "Jaise: 'Delhi mein mason ka kaam mila hai'"
+            "Jaise: 'Delhi mein raaj mistri ka kaam mila hai'"
         )
 
     phone_hash = _hash_phone(session_id)
