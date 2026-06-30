@@ -136,8 +136,8 @@ def generate_contractor_risk_response(
         user_prompt = (
             f"A worker asked about a contractor. Here is the data:\n"
             f"- Contractor name: {contractor_name}\n"
-            f"- Risk score: {risk_score}/100 (lower = more dangerous)\n"
-            f"- Risk level: {risk_level} ({risk_label})\n"
+            f"- Trust score: {risk_score}/100 (lower = more dangerous)\n"
+            f"- Trust level: {risk_level} ({risk_label})\n"
             f"- Total worker reports: {total_reports}\n"
             f"- Advice: {advice}\n\n"
             f"Tell the worker about this contractor's reputation based ONLY on this data. "

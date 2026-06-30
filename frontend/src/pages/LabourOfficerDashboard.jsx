@@ -138,7 +138,7 @@ export default function LabourOfficerDashboard({ onBack }) {
           <div className={styles.kpiValue}>{overview?.active_officers || 4}</div>
         </div>
         <div className={styles.kpiCard}>
-          <div className={styles.kpiLabel}>High-Risk Contractors</div>
+          <div className={styles.kpiLabel}>Low-Trust Contractors</div>
           <div className={styles.kpiValue}>{overview?.high_risk_contractors || 0}</div>
         </div>
         <div className={styles.kpiCard}>
@@ -261,18 +261,18 @@ export default function LabourOfficerDashboard({ onBack }) {
               <tr>
                 <th>Contractor</th>
                 <th>District</th>
-                <th>Risk Score</th>
-                <th>Complaints</th>
+                <th>Trust Score</th>
+                <th>Reports</th>
                 <th>Status</th>
                 <th>Action</th>
               </tr>
             </thead>
             <tbody>
               {contractors.map(c => {
-                let badgeClass = styles.badgeGreen;
-                if (c.risk_score < 50) badgeClass = styles.badgeRed;
-                else if (c.risk_score < 70) badgeClass = styles.badgeOrange;
-                else if (c.risk_score < 90) badgeClass = styles.badgeYellow;
+                let badgeClass = styles.badgeRed;
+                if (c.risk_score >= 75) badgeClass = styles.badgeGreen;
+                else if (c.risk_score >= 50) badgeClass = styles.badgeYellow;
+                else if (c.risk_score >= 25) badgeClass = styles.badgeOrange;
 
                 return (
                   <tr key={c.id}>

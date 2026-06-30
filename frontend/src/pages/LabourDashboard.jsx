@@ -3,18 +3,18 @@ import { fetchDashboardOverview, fetchRecentComplaints, fetchAllContractors, fet
 import styles from './Dashboard.module.css';
 
 function RiskBadge({ score }) {
-  let levelClass = styles.green;
-  let label = '🟢 Safe';
+  let levelClass = styles.red;
+  let label = '🔴 High Risk';
   
-  if (score > 75) {
-    levelClass = styles.red;
-    label = '🔴 High Risk';
-  } else if (score > 50) {
-    levelClass = styles.orange;
-    label = '🟠 Warning';
-  } else if (score > 25) {
+  if (score >= 75) {
+    levelClass = styles.green;
+    label = '🟢 Safe';
+  } else if (score >= 50) {
     levelClass = styles.yellow;
     label = '🟡 Caution';
+  } else if (score >= 25) {
+    levelClass = styles.orange;
+    label = '🟠 Warning';
   }
 
   return <span className={`${styles.badge} ${levelClass}`}>{label}</span>;
@@ -69,7 +69,7 @@ export default function LabourDashboard({ onBack }) {
           <div className={styles.statValue}>{overview?.complaints_last_7_days || 0}</div>
         </div>
         <div className={styles.statCard}>
-          <div className={styles.statLabel}>High Risk Contractors</div>
+          <div className={styles.statLabel}>Low Trust Contractors</div>
           <div className={styles.statValue} style={{ color: '#ef4444' }}>{overview?.high_risk_contractors || 0}</div>
         </div>
         <div className={styles.statCard}>
@@ -131,15 +131,15 @@ export default function LabourDashboard({ onBack }) {
 
       <div className={styles.detailGrid}>
         <div className={styles.tableCard} style={{ marginBottom: 0 }}>
-          <h3 className={styles.tableTitle}>High Risk Contractors</h3>
+          <h3 className={styles.tableTitle}>Contractor Trust Scores</h3>
           <table className={styles.dataTable}>
             <thead>
               <tr>
                 <th>Contractor</th>
                 <th>District</th>
-                <th>Risk Score</th>
-                <th>Complaints</th>
-                <th>Risk Badge</th>
+                <th>Trust Score</th>
+                <th>Reports</th>
+                <th>Trust Badge</th>
               </tr>
             </thead>
             <tbody>

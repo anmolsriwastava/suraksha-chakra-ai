@@ -30,7 +30,7 @@ def get_dashboard_overview(ngo_district: str = "ALL_DISTRICTS", db: Session = De
     seven_days_ago = datetime.utcnow() - timedelta(days=7)
     reports_last_7_days = q_reports.filter(WageReport.reported_at >= seven_days_ago).scalar() or 0
 
-    q_contractors = db.query(func.count(ContractorRisk.id)).filter(ContractorRisk.risk_score >= 51)
+    q_contractors = db.query(func.count(ContractorRisk.id)).filter(ContractorRisk.risk_score <= 50)
     if ngo_district != "ALL_DISTRICTS":
         q_contractors = q_contractors.filter(ContractorRisk.district == ngo_district)
     
@@ -99,8 +99,8 @@ def get_recent_complaints(limit: int = 50, ngo_district: str = "ALL_DISTRICTS", 
 
 @router.get("/contractors")
 def get_all_contractors(ngo_district: str = "ALL_DISTRICTS", db: Session = Depends(get_db_session)):
-    """Fetch all contractors for the High Risk Contractors table."""
-    q = db.query(ContractorRisk).filter(ContractorRisk.total_reports > 0).order_by(ContractorRisk.risk_score.desc())
+    """Fetch all contractors for the Lowest Trust Contractors table."""
+    q = db.query(ContractorRisk).filter(ContractorRisk.total_reports > 0).order_by(ContractorRisk.risk_score.asc())
     
     if ngo_district != "ALL_DISTRICTS":
         q = q.filter(ContractorRisk.district == ngo_district)
@@ -186,7 +186,7 @@ def get_district_heatmap(ngo_district: str = "ALL_DISTRICTS", db: Session = Depe
         worst_contractor = (
             db.query(ContractorRisk)
             .filter(ContractorRisk.district == row.district)
-            .order_by(ContractorRisk.risk_score.desc())
+            .order_by(ContractorRisk.risk_score.asc())
             .first()
         )
         

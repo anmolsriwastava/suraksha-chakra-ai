@@ -72,7 +72,7 @@ def create_contractor(
         phone=phone,
         district=district,
         state=state,
-        risk_score=0.0,
+        risk_score=100.0,
         total_reports=0,
         verified_bad_reports=0,
     )
@@ -145,31 +145,16 @@ def _recalculate_risk(db: Session, contractor_id: int):
     num_complaints = len(bad_reports)
     
     if num_complaints == 0:
-        contractor.risk_score = 0.0
+        contractor.risk_score = 100.0
         contractor.total_reports = 0
         contractor.verified_bad_reports = 0
         db.commit()
         return
 
-    # 1. Normalize complaint count (cap at 10 for max score of 40)
-    norm_complaint = min(1.0, num_complaints / 10.0)
-
-    # 2. Average wage gap % (cap at 50% gap for max score of 30)
+    # Trust Score: Starts at 100, drops by 5 per complaint, plus additional penalties for severity
     avg_gap_pct = sum(r.gap_percent for r in bad_reports) / num_complaints
-    norm_gap = min(1.0, avg_gap_pct / 50.0)
-
-    # 3. Repeat offender (multiple reports from DIFFERENT workers)
-    unique_workers = len(set(r.worker_id for r in bad_reports))
-    norm_repeat = min(1.0, unique_workers / 5.0)
-
-    # 4. Recency (did a complaint happen in the last 30 days?)
-    most_recent = max(r.reported_at for r in bad_reports)
-    days_ago = (datetime.utcnow() - most_recent).days
-    # If 0 days ago -> 1.0. If 90 days ago -> 0.0
-    norm_recency = max(0.0, 1.0 - (days_ago / 90.0))
-
-    # Calculate final score
-    score = (40 * norm_complaint) + (30 * norm_gap) + (20 * norm_repeat) + (10 * norm_recency)
+    
+    score = 100.0 - (num_complaints * 5.0) - (avg_gap_pct * 10.0)
     
     # Clamp 0 - 100
     final_score = max(0.0, min(100.0, score))
@@ -199,12 +184,12 @@ def get_contractor_risk_summary(
 
     score = contractor.risk_score
     
-    # 0-25 Green, 26-50 Yellow, 51-75 Orange, 76-100 Red
-    if score <= 25:
+    # 76-100 Green, 51-75 Yellow, 26-50 Orange, 0-25 Red
+    if score >= 75:
         level = "low"
         label = "Safe"
         advice = "No major complaints found. Still, report your wage so others are informed."
-    elif score <= 50:
+    elif score >= 50:
         level = "medium"
         label = "Caution"
         advice = (
