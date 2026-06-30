@@ -32,7 +32,9 @@ def _generate(system_prompt: str, user_prompt: str, language: str = "hi") -> str
     """
     lang_instruction = f"\n\nCRITICAL INSTRUCTION: You MUST write your response ENTIRELY in the language code: '{language}'. "
     if language in ['hi', 'hi-IN']:
-        lang_instruction += "You may use Hindi or Hinglish."
+        lang_instruction += "You MUST use pure Hindi in Devanagari script (e.g. नमस्ते). Do not use English/Latin script."
+    elif language == 'hinglish':
+        lang_instruction += "You MUST use Hinglish (Hindi spoken language but written in English/Latin alphabet, e.g. 'Namaste, main aapki madad kar sakta hoon'). Do NOT use Devanagari script."
     elif language in ['en', 'en-IN']:
         lang_instruction += "You must use pure English."
     else:

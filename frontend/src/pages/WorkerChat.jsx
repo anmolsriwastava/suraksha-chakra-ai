@@ -123,12 +123,37 @@ const TRANSLATIONS = {
     qr_plumber_chennai: "मी चेन्नईमध्ये प्लंबर म्हणून काम करतो",
     qr_report_issue: "मला तक्रार नोंदवायची आहे",
     qr_need_help: "मला कायदेशीर मदत हवी आहे"
+  },
+  hinglish: {
+    title: "Suraksha Chakra AI",
+    subtitle: "Online • Workers ki Suraksha",
+    placeholder: "Message type karein",
+    voiceBtn: "Voice Message",
+    sendBtn: "Send",
+    micError: "Microphone access denied. Please text type karein.",
+    serverError: "Server se connect nahi ho pa raha. Baad mein try karein.",
+    voiceError: "Voice message mila par process nahi ho saka. Text try karein.",
+    today: "Aaj",
+    downloadNotice: "📄 Legal Notice Download karein (PDF)",
+    qr_welcome_1: "Delhi mein raj mistri ka kaam mila",
+    qr_welcome_2: "Mumbai mein electrician hoon",
+    qr_check_contractor: "Contractor ka naam batana hai",
+    qr_wage_400: "Mujhe ₹400 mil raha hai",
+    qr_wage_500: "Mujhe ₹500 mil raha hai",
+    qr_wage_600: "Mujhe ₹600 mil raha hai",
+    qr_check_another: "Dusra contractor check karna hai",
+    qr_new_wage: "Naya wage check karna hai",
+    qr_check_wage: "Sahi wage check karna hai",
+    qr_plumber_chennai: "Main Chennai mein plumber hoon",
+    qr_report_issue: "Mujhe complaint darj karni hai",
+    qr_need_help: "Mujhe legal help chahiye"
   }
 };
 
 const LANGUAGES = [
   { code: 'en', label: 'English' },
   { code: 'hi', label: 'हिन्दी' },
+  { code: 'hinglish', label: 'Hinglish' },
   { code: 'ta', label: 'தமிழ்' },
   { code: 'bn', label: 'বাংলা' },
   { code: 'mr', label: 'मराठी' }
@@ -303,40 +328,55 @@ export default function WorkerChat() {
     return TRANSLATIONS[lang]?.[key] || TRANSLATIONS['en'][key] || key;
   }, [lang]);
 
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState(() => {
+    const saved = localStorage.getItem('workerMessages');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return parsed.map(m => ({ ...m, timestamp: new Date(m.timestamp) }));
+      } catch (e) { return []; }
+    }
+    return [];
+  });
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
-  const [quickReplies, setQuickReplies] = useState(DEFAULT_QUICK_REPLIES);
+  const [quickReplies, setQuickReplies] = useState(() => {
+    const saved = localStorage.getItem('workerQuickReplies');
+    return saved ? JSON.parse(saved) : DEFAULT_QUICK_REPLIES;
+  });
   const [recordingSeconds, setRecordingSeconds] = useState(0);
-  const [sessionId] = useState('demo-user-' + Date.now());
+  const [sessionId] = useState(() => {
+    const saved = localStorage.getItem('workerSessionId');
+    if (saved) return saved;
+    const newId = 'demo-user-' + Date.now();
+    localStorage.setItem('workerSessionId', newId);
+    return newId;
+  });
 
-  // Fetch welcome message on mount or when language changes IF no messages exist yet
-  // Or, if language changes and the FIRST message is the welcome message, regenerate it.
+  useEffect(() => {
+    localStorage.setItem('workerMessages', JSON.stringify(messages));
+  }, [messages]);
+
+  useEffect(() => {
+    localStorage.setItem('workerQuickReplies', JSON.stringify(quickReplies));
+  }, [quickReplies]);
+
+  const langRef = useRef(lang);
+  const fetchedRef = useRef(false);
+
   useEffect(() => {
     async function fetchWelcome() {
       setIsTyping(true);
       try {
         const response = await sendChatMessage('', sessionId, null, lang);
-        setMessages(prev => {
-          if (prev.length <= 1) {
-            return [{
-              id: 0,
-              from: 'bot',
-              type: 'text',
-              text: response.reply,
-              timestamp: new Date()
-            }];
-          }
-          // If we already have a conversation, just update the latest bot message if it was a welcome msg? 
-          // Actually, let's just leave the history alone if there is a history, except updating the first msg.
-          const newMsgs = [...prev];
-          newMsgs[0] = {
-            ...newMsgs[0],
-            text: response.reply
-          };
-          return newMsgs;
-        });
+        setMessages([{
+          id: 0,
+          from: 'bot',
+          type: 'text',
+          text: response.reply,
+          timestamp: new Date()
+        }]);
         setQuickReplies(response.quick_replies || []);
       } catch (e) {
         console.error(e);
@@ -344,7 +384,21 @@ export default function WorkerChat() {
         setIsTyping(false);
       }
     }
-    fetchWelcome();
+
+    if (!fetchedRef.current && messages.length === 0) {
+      fetchedRef.current = true;
+      fetchWelcome();
+    } else if (langRef.current !== lang) {
+      langRef.current = lang;
+      sendChatMessage('', sessionId, null, lang).then(response => {
+        setMessages(prev => {
+          if (prev.length === 0) return prev;
+          const newMsgs = [...prev];
+          newMsgs[0] = { ...newMsgs[0], text: response.reply };
+          return newMsgs;
+        });
+      }).catch(console.error);
+    }
   }, [lang, sessionId]);
 
   const handleLangChange = (code) => {

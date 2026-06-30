@@ -132,6 +132,7 @@ async def generate_tts_audio_base64(text: str, lang: str = "hi") -> str:
         voices = {
             "hi": "hi-IN-MadhurNeural",
             "en": "en-IN-PrabhatNeural",
+            "hinglish": "en-IN-PrabhatNeural",
             "ta": "ta-IN-ValluvarNeural",
             "bn": "bn-IN-BashkarNeural",
             "mr": "mr-IN-ManoharNeural"
