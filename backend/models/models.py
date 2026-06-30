@@ -76,6 +76,7 @@ class WageReport(Base):
     gap_percent = Column(Float, nullable=False)
 
     status = Column(Enum(ReportStatus), default=ReportStatus.PENDING)
+    assigned_officer = Column(String, nullable=True)
     reported_at = Column(DateTime, default=datetime.utcnow)
 
     worker = relationship("Worker", back_populates="reports")

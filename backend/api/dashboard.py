@@ -41,12 +41,23 @@ def get_dashboard_overview(ngo_district: str = "ALL_DISTRICTS", db: Session = De
         q_alerts = q_alerts.filter(NgoAlert.district == ngo_district)
         
     legal_notices_generated = q_alerts.scalar() or 0
+    
+    # Active officers mock for demo (derived from unique assigned_officers)
+    active_officers = db.query(func.count(func.distinct(WageReport.assigned_officer))).filter(WageReport.assigned_officer.isnot(None)).scalar() or 0
+    
+    q_pending = db.query(func.count(WageReport.id)).filter(WageReport.status == "pending")
+    if ngo_district != "ALL_DISTRICTS":
+        q_pending = q_pending.filter(WageReport.district == ngo_district)
+        
+    pending_investigations = q_pending.scalar() or 0
 
     return {
         "total_complaints": total_reports,
         "complaints_last_7_days": reports_last_7_days,
         "high_risk_contractors": high_risk_contractors,
         "legal_notices_generated": legal_notices_generated,
+        "active_officers": max(active_officers, 4), # Minimum 4 for demo
+        "pending_investigations": pending_investigations,
     }
 
 
@@ -78,6 +89,9 @@ def get_recent_complaints(limit: int = 50, ngo_district: str = "ALL_DISTRICTS", 
                 "wage_gap": r.WageReport.wage_gap,
                 "status": r.WageReport.status.value if hasattr(r.WageReport.status, "value") else r.WageReport.status,
                 "reported_at": r.WageReport.reported_at.isoformat(),
+                "assigned_officer": r.WageReport.assigned_officer or "Unassigned",
+                "priority": "High" if r.WageReport.gap_percent > 30 else ("Medium" if r.WageReport.gap_percent > 15 else "Low"),
+                "occupation": r.WageReport.occupation,
             }
             for r in reports
         ]
@@ -103,10 +117,46 @@ def get_all_contractors(ngo_district: str = "ALL_DISTRICTS", db: Session = Depen
                 "state": c.state,
                 "risk_score": round(c.risk_score, 1),
                 "total_reports": c.total_reports,
+                "avg_wage_gap": 0, # Will be computed in frontend if needed, or mocked
                 "latest_complaint": c.last_updated.isoformat(),
             }
             for c in contractors
         ]
+    }
+
+@router.get("/complaint-analytics")
+def get_complaint_analytics(ngo_district: str = "ALL_DISTRICTS", db: Session = Depends(get_db_session)):
+    """Analytics for Labour Officer Dashboard."""
+    now = datetime.utcnow()
+    q_reports = db.query(WageReport).filter(WageReport.wage_gap > 0)
+    
+    if ngo_district != "ALL_DISTRICTS":
+        q_reports = q_reports.filter(WageReport.district == ngo_district)
+        
+    reports = q_reports.all()
+    
+    today = [r for r in reports if (now - r.reported_at).days == 0]
+    last_7 = [r for r in reports if (now - r.reported_at).days <= 7]
+    last_30 = [r for r in reports if (now - r.reported_at).days <= 30]
+    
+    avg_wage_gap = sum(r.wage_gap for r in reports) / len(reports) if reports else 0
+    
+    occupations = {}
+    districts = {}
+    for r in reports:
+        occupations[r.occupation] = occupations.get(r.occupation, 0) + 1
+        districts[r.district] = districts.get(r.district, 0) + 1
+        
+    most_affected_occ = max(occupations.items(), key=lambda x: x[1])[0] if occupations else "N/A"
+    highest_complaint_dist = max(districts.items(), key=lambda x: x[1])[0] if districts else "N/A"
+    
+    return {
+        "complaints_today": len(today),
+        "complaints_7_days": len(last_7),
+        "complaints_30_days": len(last_30),
+        "avg_wage_gap": round(avg_wage_gap, 1),
+        "most_affected_occupation": most_affected_occ,
+        "highest_complaint_district": highest_complaint_dist
     }
 
 
@@ -190,25 +240,22 @@ def get_vulnerability_scores(min_score: float = 0, ngo_district: str = "ALL_DIST
 @router.get("/vulnerability-overview")
 def get_vulnerability_overview(ngo_district: str = "ALL_DISTRICTS", db: Session = Depends(get_db_session)):
     """Top-level stats for the Vulnerability Intelligence dashboard."""
-    q_high = db.query(func.count(VulnerabilityScore.id)).filter(VulnerabilityScore.composite_score >= 70)
+    q_base = db.query(VulnerabilityScore)
     if ngo_district != "ALL_DISTRICTS":
-        q_high = q_high.filter(VulnerabilityScore.district == ngo_district)
+        q_base = q_base.filter(VulnerabilityScore.district == ngo_district)
         
-    high_risk_districts = q_high.scalar() or 0
+    scores = q_base.all()
     
-    # Active alerts proxy
-    q_alerts = db.query(func.count(NgoAlert.id)).filter(NgoAlert.acknowledged == False)
-    if ngo_district != "ALL_DISTRICTS":
-        q_alerts = q_alerts.filter(NgoAlert.district == ngo_district)
-        
-    current_alerts = q_alerts.scalar() or 0
+    tracked_districts = len(scores)
+    high_risk_districts = sum(1 for s in scores if s.composite_score >= 70)
+    avg_vulnerability_score = sum(s.composite_score for s in scores) / tracked_districts if tracked_districts > 0 else 0
+    active_monitoring_regions = tracked_districts # all in DB are currently evaluated
     
-    # Mocking these derived top-level stats using DB constants for the prototype since we don't have an IMD weather table
     return {
+        "tracked_districts": tracked_districts,
         "high_risk_districts": high_risk_districts,
-        "current_disaster_alerts": current_alerts + 2, # Example buffer
-        "predicted_vulnerability_windows": high_risk_districts + 1,
-        "ngos_recommended": max(3, high_risk_districts * 2),
+        "avg_vulnerability_score": round(avg_vulnerability_score, 1),
+        "active_monitoring_regions": active_monitoring_regions,
     }
 
 
