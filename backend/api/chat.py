@@ -40,6 +40,7 @@ class ChatRequest(BaseModel):
     message: str = ""
     session_id: str = "demo-user"
     audio_base64: Optional[str] = None  # base64-encoded audio for voice messages
+    language: str = "en"
 
 
 class ChatResponse(BaseModel):
@@ -50,8 +51,8 @@ class ChatResponse(BaseModel):
     audio_base64: Optional[str] = None
 
 
-async def _create_response(reply: str, session_id: str, extracted: dict = None, quick_replies: list = None) -> ChatResponse:
-    audio = await generate_tts_audio_base64(reply)
+async def _create_response(reply: str, session_id: str, extracted: dict = None, quick_replies: list = None, language: str = "hi") -> ChatResponse:
+    audio = await generate_tts_audio_base64(reply, language)
     return ChatResponse(
         reply=reply,
         session_id=session_id,
@@ -89,23 +90,23 @@ def _hash_phone(session_id: str) -> str:
 
 QUICK_REPLIES = {
     "welcome": [
-        "Delhi mein raaj mistri ka kaam mila",
-        "Mumbai mein electrician hoon",
-        "Contractor ka naam check karna hai",
+        "qr_welcome_1",
+        "qr_welcome_2",
+        "qr_check_contractor",
     ],
     "after_wage": [
-        "Mujhe ₹400 mil raha hai",
-        "Mujhe ₹500 mil raha hai",
-        "Mujhe ₹600 mil raha hai",
-        "Contractor ka naam batana hai",
+        "qr_wage_400",
+        "qr_wage_500",
+        "qr_wage_600",
+        "qr_check_contractor",
     ],
     "after_report": [
-        "Doosra contractor check karna hai",
-        "Naya wage query karna hai",
+        "qr_check_another",
+        "qr_new_wage",
     ],
     "after_contractor": [
-        "Wage check karna hai",
-        "Doosra contractor check karna hai",
+        "qr_check_wage",
+        "qr_check_another",
     ],
 }
 
@@ -176,9 +177,8 @@ def _handle_contractor_check(
     if (not contractor_name or not contractor_name.strip() or 
         len(contractor_name.strip()) < 4 or 
         cleaned_name in invalid_names or
-        # Block if name is just common Hindi words (no proper noun detected)
         all(word.lower() in invalid_names for word in contractor_name.strip().split())):
-        return responder.generate_ask_missing_info("contractor_name")
+        return responder.generate_ask_missing_info("contractor_name", intent_result.language)
 
     district = intent_result.location_district or session.get("pending_location", "")
     state = intent_result.location_state or ""
@@ -220,7 +220,7 @@ def _handle_report_wage(
     """Record wage report and generate confirmation."""
     reported_wage = intent_result.reported_wage
     if not reported_wage:
-        return responder.generate_ask_missing_info("reported_wage")
+        return responder.generate_ask_missing_info("reported_wage", intent_result.language)
 
     fair_wage = session.get("fair_wage")
     occupation = intent_result.occupation or session.get("pending_occupation")
@@ -329,21 +329,24 @@ async def chat(
     if request.audio_base64 and not text:
         try:
             audio_bytes = base64.b64decode(request.audio_base64)
-            text = await transcribe_audio(audio_bytes)
+            # Pass language code e.g. hi-IN to Sarvam
+            text = await transcribe_audio(audio_bytes, language_hint=f"{request.language}-IN")
             logger.info(f"Transcribed audio: {text[:80]}...")
         except Exception as e:
             logger.error(f"Audio transcription failed: {e}")
             return await _create_response(
-                reply="Voice message process nahi ho saka. Please text mein likhen. 🙏",
+                reply=responder.generate_voice_error_response(request.language),
                 session_id=request.session_id,
                 quick_replies=QUICK_REPLIES["welcome"],
+                language=request.language,
             )
 
     if not text:
         return await _create_response(
-            reply=responder.generate_welcome_response(),
+            reply=responder.generate_welcome_response(request.language),
             session_id=request.session_id,
             quick_replies=QUICK_REPLIES["welcome"],
+            language=request.language,
         )
 
     logger.info(f"Chat [{request.session_id}]: {text[:100]}")
@@ -358,6 +361,9 @@ async def chat(
     logger.info(f"Intent: {intent_result.intent}, occ={intent_result.occupation}")
 
     # Build the extraction dict for the frontend
+    # Override language with request.language so responses stick to selected UI language
+    intent_result.language = request.language
+    
     extracted = {
         "intent": intent_result.intent.value,
         "occupation": intent_result.occupation,
@@ -400,9 +406,9 @@ async def chat(
                     )
                 
                 extracted["report_id"] = last_report.id
-                reply = f"✅ Contractor {intent_result.contractor_name} ka naam record ho gaya hai. Aap apna legal notice neeche download kar sakte hain."
+                reply = responder.generate_legal_notice_ready_response(intent_result.contractor_name, request.language)
             else:
-                reply = f"Shukriya. Aapka data anonymised form mein record kar liya gaya hai."
+                reply = responder.generate_thanks_response(request.language)
             
             session["last_intent"] = "contractor_check"
             
@@ -411,6 +417,7 @@ async def chat(
                 session_id=request.session_id,
                 extracted=extracted,
                 quick_replies=QUICK_REPLIES["after_report"],
+                language=request.language,
             )
 
     # Handle wage reporting (multi-turn: could be just a number after wage query)
@@ -428,6 +435,7 @@ async def chat(
             session_id=request.session_id,
             extracted=extracted,
             quick_replies=_pick_quick_replies(WorkerIntent.REPORT_WAGE),
+            language=request.language,
         )
 
     if intent_result.intent == WorkerIntent.WAGE_QUERY:
@@ -437,6 +445,7 @@ async def chat(
             session_id=request.session_id,
             extracted=extracted,
             quick_replies=_pick_quick_replies(WorkerIntent.WAGE_QUERY),
+            language=request.language,
         )
 
     if intent_result.intent == WorkerIntent.CONTRACTOR_CHECK:
@@ -446,6 +455,7 @@ async def chat(
             session_id=request.session_id,
             extracted=extracted,
             quick_replies=_pick_quick_replies(WorkerIntent.CONTRACTOR_CHECK),
+            language=request.language,
         )
 
     # Fallback: help / unknown
@@ -454,4 +464,5 @@ async def chat(
         session_id=request.session_id,
         extracted=extracted,
         quick_replies=QUICK_REPLIES["welcome"],
+        language=request.language,
     )

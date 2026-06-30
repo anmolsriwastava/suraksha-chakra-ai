@@ -25,17 +25,27 @@ client = Groq(api_key=settings.groq_api_key)
 # ── Common generation helper ────────────────────────────────────────────
 
 
-def _generate(system_prompt: str, user_prompt: str) -> str:
+def _generate(system_prompt: str, user_prompt: str, language: str = "hi") -> str:
     """
     Call Groq with a system + user prompt.
     Returns the generated text or raises on failure.
     """
+    lang_instruction = f"\n\nCRITICAL INSTRUCTION: You MUST write your response ENTIRELY in the language code: '{language}'. "
+    if language in ['hi', 'hi-IN']:
+        lang_instruction += "You may use Hindi or Hinglish."
+    elif language in ['en', 'en-IN']:
+        lang_instruction += "You must use pure English."
+    else:
+        lang_instruction += f"You must use pure {language} script. Do not use Hinglish or English words awkwardly."
+
+    final_system_prompt = system_prompt + lang_instruction
+
     response = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         temperature=0.4,  # slight creativity for natural phrasing
         max_tokens=300,
         messages=[
-            {"role": "system", "content": system_prompt},
+            {"role": "system", "content": final_system_prompt},
             {"role": "user", "content": user_prompt},
         ],
     )
@@ -45,10 +55,10 @@ def _generate(system_prompt: str, user_prompt: str) -> str:
 SYSTEM_PROMPT = """You are Suraksha Chakra, a trusted legal rights assistant for Indian migrant construction workers. 
 
 Rules you must never break:
-- Write in simple, correct Hindi or Hinglish. Never mix random English words awkwardly.
+- Write in simple, correct language as requested. Never mix random English words awkwardly unless requested.
 - Maximum 3 sentences per response. Be direct and clear.
 - Never use 🤑 or casual emojis. Only use: 🙏 ✅ ⚠️ 🚨
-- Always address the worker as "aap" never "bhai" or "dost"
+- Always address the worker respectfully.
 - Use only the exact numbers provided to you. Never invent wages or scores.
 - Tone: serious, trustworthy, like a legal aid worker speaking to someone who needs help."""
 
@@ -77,7 +87,7 @@ def generate_wage_response(
             f"Tell the worker their fair wage and ask how much they are actually getting paid. "
             f"If confidence is 'low', mention the data may not be exact for their specific area."
         )
-        return _generate(SYSTEM_PROMPT, user_prompt)
+        return _generate(SYSTEM_PROMPT, user_prompt, language)
 
     except Exception as e:
         logger.warning(f"Response generation failed, using template: {e}")
@@ -132,7 +142,7 @@ def generate_contractor_risk_response(
             f"If risk is high, warn them clearly. If risk is low or unknown, tell them "
             f"it looks okay but encourage them to report their wage after working."
         )
-        return _generate(SYSTEM_PROMPT, user_prompt)
+        return _generate(SYSTEM_PROMPT, user_prompt, language)
 
     except Exception as e:
         logger.warning(f"Response generation failed, using template: {e}")
@@ -170,7 +180,7 @@ def generate_contractor_not_found_response(
             f"reports about them yet. Tell the worker this contractor is unknown to us, "
             f"and encourage them to be the first to report their wage after working."
         )
-        return _generate(SYSTEM_PROMPT, user_prompt)
+        return _generate(SYSTEM_PROMPT, user_prompt, language)
     except Exception:
         return (
             f"'{contractor_name}' ke baare mein abhi koi report nahi hai. "
@@ -204,7 +214,7 @@ def generate_report_confirmation(
             f"{'Reassure them their identity is protected. ' if underpaid else ''}"
             f"{'Thank them for reporting — their data helps other workers.' if not underpaid else ''}"
         )
-        return _generate(SYSTEM_PROMPT, user_prompt)
+        return _generate(SYSTEM_PROMPT, user_prompt, language)
 
     except Exception as e:
         logger.warning(f"Response generation failed, using template: {e}")
@@ -241,35 +251,59 @@ def _template_report_confirmation(
 
 
 def generate_welcome_response(language: str = "hi") -> str:
-    """Generate the initial greeting. Uses a template — no need for LLM here."""
-    return (
-        "Namaste! 🙏 Main *Suraksha Chakra* hoon.\n\n"
-        "Main aapki in chezon mein madad kar sakta hoon:\n\n"
-        "1️⃣  Fair wage jaanne ke liye — apna kaam aur shehar batayein\n"
-        "2️⃣  Contractor check karne ke liye — unka naam batayein\n"
-        "3️⃣  Wage report karne ke liye — aapko kitna mila, batayein\n\n"
-        "Aap *Hindi ya Hinglish* mein likh sakte hain.\n"
-        "Voice message bhi bhej sakte hain! 🎤"
-    )
+    """Generate the initial greeting."""
+    try:
+        user_prompt = (
+            "Greet the user warmly as Suraksha Chakra. "
+            "Tell them you can help with 3 things: 1. Checking fair wages (ask for occupation and location), "
+            "2. Checking contractor reputation (ask for contractor name), "
+            "3. Reporting wage theft. "
+            "Tell them they can type or send a voice message."
+        )
+        return _generate(SYSTEM_PROMPT, user_prompt, language)
+    except Exception:
+        return (
+            "Namaste! 🙏 Main *Suraksha Chakra* hoon.\n\n"
+            "Main aapki in chezon mein madad kar sakta hoon:\n\n"
+            "1️⃣  Fair wage jaanne ke liye — apna kaam aur shehar batayein\n"
+            "2️⃣  Contractor check karne ke liye — unka naam batayein\n"
+            "3️⃣  Wage report karne ke liye — aapko kitna mila, batayein\n\n"
+            "Aap voice message bhi bhej sakte hain! 🎤"
+        )
 
 
 # ── Ask for missing info ───────────────────────────────────────────────
 
 
-def generate_ask_missing_info(
-    missing_field: str, language: str = "hi"
-) -> str:
-    """
-    When extraction is incomplete, ask the worker for the missing piece.
-    Uses templates — fast and reliable.
-    """
-    prompts = {
-        "occupation": "Aap kya kaam karte hain? Jaise: raaj mistri, electrician, plumber, helper",
-        "location": "Aap kahan kaam kar rahe hain? Shehar ya district ka naam batayein.",
-        "contractor_name": "Kis contractor ka naam check karna hai? Unka naam likhen ya bolein. Jaise: Ramesh Constructions, Delhi",
-        "reported_wage": "Aapko kitna mil raha hai? Sirf number bhejein (jaise: 400)",
+def generate_ask_missing_info(missing_field: str, language: str = "hi") -> str:
+    """When extraction is incomplete, ask the worker for the missing piece."""
+    field_descriptions = {
+        "occupation": "what kind of work they do (e.g. mason, electrician, plumber, helper)",
+        "location": "which city or district they are working in",
+        "contractor_name": "the name of the contractor they want to check",
+        "reported_wage": "how much they are getting paid (ask them to just send the number)",
     }
-    return prompts.get(
-        missing_field,
-        "Kripya thoda aur detail mein batayein."
-    )
+    desc = field_descriptions.get(missing_field, "more details")
+    try:
+        user_prompt = f"Politely ask the worker to provide {desc}."
+        return _generate(SYSTEM_PROMPT, user_prompt, language)
+    except Exception:
+        return "Kripya thoda aur detail mein batayein."
+
+def generate_voice_error_response(language: str = "hi") -> str:
+    try:
+        return _generate(SYSTEM_PROMPT, "Apologize that the voice message could not be processed and ask them to type their message instead.", language)
+    except Exception:
+        return "Voice message process nahi ho saka. Please text mein likhen. 🙏"
+
+def generate_legal_notice_ready_response(contractor_name: str, language: str = "hi") -> str:
+    try:
+        return _generate(SYSTEM_PROMPT, f"Confirm that the contractor {contractor_name}'s name has been recorded. Tell the worker they can download their legal notice below.", language)
+    except Exception:
+        return f"✅ Contractor {contractor_name} ka naam record ho gaya hai. Aap apna legal notice neeche download kar sakte hain."
+
+def generate_thanks_response(language: str = "hi") -> str:
+    try:
+        return _generate(SYSTEM_PROMPT, "Thank the user and tell them their data has been recorded securely and anonymously.", language)
+    except Exception:
+        return "Shukriya. Aapka data anonymised form mein record kar liya gaya hai."

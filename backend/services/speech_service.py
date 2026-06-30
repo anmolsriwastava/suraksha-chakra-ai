@@ -128,8 +128,18 @@ async def generate_tts_audio_base64(text: str, lang: str = "hi") -> str:
         # Clean text of basic markdown for better pronunciation
         clean_text = text.replace("*", "").replace("#", "").replace("_", "")
         
-        # Hindi male voice — natural and fluent
-        voice = "hi-IN-MadhurNeural"
+        # Select appropriate regional voice
+        voices = {
+            "hi": "hi-IN-MadhurNeural",
+            "en": "en-IN-PrabhatNeural",
+            "ta": "ta-IN-ValluvarNeural",
+            "bn": "bn-IN-BashkarNeural",
+            "mr": "mr-IN-ManoharNeural"
+        }
+        
+        # Get base language code (e.g. 'hi' from 'hi-IN')
+        base_lang = lang.split("-")[0]
+        voice = voices.get(base_lang, "hi-IN-MadhurNeural")
         
         communicate = edge_tts.Communicate(clean_text, voice)
         fp = BytesIO()

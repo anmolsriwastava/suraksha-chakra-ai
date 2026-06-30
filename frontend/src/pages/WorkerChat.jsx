@@ -2,6 +2,123 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { sendChatMessage } from '../utils/api';
 import styles from './WorkerChat.module.css';
 
+// ── Translations ───────────────────────────────────────────────────────
+const TRANSLATIONS = {
+  en: {
+    title: "Suraksha Chakra AI",
+    subtitle: "Online • Protecting Workers",
+    placeholder: "Type a message",
+    voiceBtn: "Voice Message",
+    sendBtn: "Send",
+    micError: "Microphone access denied. Please text or check browser permissions.",
+    serverError: "Server connection failed. Please try again later.",
+    voiceError: "Voice message received but couldn't be processed. Try text.",
+    today: "Today",
+    downloadNotice: "📄 Download Legal Notice (PDF)",
+    qr_welcome_1: "I got work as a mason in Delhi",
+    qr_welcome_2: "I am an electrician in Mumbai",
+    qr_check_contractor: "Check contractor",
+    qr_wage_400: "I receive ₹400",
+    qr_wage_500: "I receive ₹500",
+    qr_wage_600: "I receive ₹600",
+    qr_check_another: "Check another contractor",
+    qr_new_wage: "Check new wage",
+    qr_check_wage: "Check fair wage"
+  },
+  hi: {
+    title: "सुरक्षा चक्र एआई",
+    subtitle: "ऑनलाइन • श्रमिकों की सुरक्षा",
+    placeholder: "एक संदेश टाइप करें",
+    voiceBtn: "वॉयस मैसेज",
+    sendBtn: "भेजें",
+    micError: "माइक्रोफोन एक्सेस नहीं मिला। कृपया टेक्स्ट में लिखें या ब्राउज़र परमिशन चेक करें।",
+    serverError: "सर्वर से कनेक्ट नहीं हो रहा। थोड़ी देर बाद ट्राई करें।",
+    voiceError: "वॉयस मैसेज मिला, पर प्रोसेस नहीं हो सका। टेक्स्ट में ट्राई करें।",
+    today: "आज",
+    downloadNotice: "📄 कानूनी नोटिस डाउनलोड करें (PDF)",
+    qr_welcome_1: "दिल्ली में राज मिस्त्री का काम मिला",
+    qr_welcome_2: "मुंबई में इलेक्ट्रीशियन हूँ",
+    qr_check_contractor: "Contractor का नाम बताना है",
+    qr_wage_400: "मुझे ₹400 मिल रहा है",
+    qr_wage_500: "मुझे ₹500 मिल रहा है",
+    qr_wage_600: "मुझे ₹600 मिल रहा है",
+    qr_check_another: "दूसरा ठेकेदार चेक करना है",
+    qr_new_wage: "नया वेतन चेक करना है",
+    qr_check_wage: "उचित वेतन चेक करना है"
+  },
+  ta: {
+    title: "சுரக்‌ஷா சக்ரா AI",
+    subtitle: "ஆன்லைன் • தொழிலாளர் பாதுகாப்பு",
+    placeholder: "செய்தியை தட்டச்சு செய்யவும்",
+    voiceBtn: "குரல் செய்தி",
+    sendBtn: "அனுப்பு",
+    micError: "மைக்ரோஃபோன் அணுகல் மறுக்கப்பட்டது. தட்டச்சு செய்யவும்.",
+    serverError: "சர்வர் இணைப்பு தோல்வி. மீண்டும் முயற்சிக்கவும்.",
+    voiceError: "குரல் செய்தி பெறப்பட்டது ஆனால் செயல்படுத்த முடியவில்லை. உரையை முயற்சிக்கவும்.",
+    today: "இன்று",
+    downloadNotice: "📄 சட்டபூர்வ அறிவிப்பை பதிவிறக்குக (PDF)",
+    qr_welcome_1: "தில்லியில் கொத்தனாராக வேலை கிடைத்தது",
+    qr_welcome_2: "மும்பையில் எலக்ட்ரீஷியன்",
+    qr_check_contractor: "ஒப்பந்ததாரரின் பெயரை சொல்ல வேண்டும்",
+    qr_wage_400: "எனக்கு ₹400 கிடைக்கிறது",
+    qr_wage_500: "எனக்கு ₹500 கிடைக்கிறது",
+    qr_wage_600: "எனக்கு ₹600 கிடைக்கிறது",
+    qr_check_another: "மற்றொரு ஒப்பந்ததாரரை சரிபார்க்கவும்",
+    qr_new_wage: "புதிய ஊதியத்தை சரிபார்க்கவும்",
+    qr_check_wage: "சரியான ஊதியத்தை சரிபார்க்கவும்"
+  },
+  bn: {
+    title: "সুরক্ষা চক্র এআই",
+    subtitle: "অনলাইন • শ্রমিকদের সুরক্ষা",
+    placeholder: "একটি বার্তা টাইপ করুন",
+    voiceBtn: "ভয়েস বার্তা",
+    sendBtn: "পাঠান",
+    micError: "মাইক্রোফোন অ্যাক্সেস অস্বীকার করা হয়েছে। টাইপ করুন।",
+    serverError: "সার্ভার সংযোগ ব্যর্থ। আবার চেষ্টা করুন।",
+    voiceError: "ভয়েস বার্তা পেয়েছি কিন্তু প্রক্রিয়া করতে পারিনি। পাঠ্য চেষ্টা করুন।",
+    today: "আজ",
+    downloadNotice: "📄 আইনি নোটিশ ডাউনলোড করুন (PDF)",
+    qr_welcome_1: "দিল্লিতে রাজমিস্ত্রির কাজ পেয়েছি",
+    qr_welcome_2: "মুম্বাইয়ে ইলেকট্রিশিয়ান",
+    qr_check_contractor: "ঠিকাদারের নাম বলতে চাই",
+    qr_wage_400: "আমি ₹৪০০ পাই",
+    qr_wage_500: "আমি ₹৫০০ পাই",
+    qr_wage_600: "আমি ₹৬০০ পাই",
+    qr_check_another: "অন্য ঠিকাদার চেক করুন",
+    qr_new_wage: "নতুন মজুরি চেক করুন",
+    qr_check_wage: "সঠিক মজুরি চেক করুন"
+  },
+  mr: {
+    title: "सुरक्षा चक्र एआय",
+    subtitle: "ऑनलाइन • कामगारांचे संरक्षण",
+    placeholder: "संदेश टाईप करा",
+    voiceBtn: "व्हॉइस मेसेज",
+    sendBtn: "पाठवा",
+    micError: "मायक्रोफोन ऍक्सेस नाकारला. कृपया टाईप करा.",
+    serverError: "सर्व्हर कनेक्शन अयशस्वी. कृपया पुन्हा प्रयत्न करा.",
+    voiceError: "व्हॉइस मेसेज मिळाला पण प्रक्रिया करू शकलो नाही. मजकूर वापरून पहा.",
+    today: "आज",
+    downloadNotice: "📄 कायदेशीर नोटीस डाउनलोड करा (PDF)",
+    qr_welcome_1: "दिल्लीत गवंडी म्हणून काम मिळाले",
+    qr_welcome_2: "मुंबईत इलेक्ट्रीशियन आहे",
+    qr_check_contractor: "कंत्राटदाराचे नाव सांगायचे आहे",
+    qr_wage_400: "मला ₹400 मिळतात",
+    qr_wage_500: "मला ₹500 मिळतात",
+    qr_wage_600: "मला ₹600 मिळतात",
+    qr_check_another: "दुसरा कंत्राटदार तपासा",
+    qr_new_wage: "नवीन वेतन तपासा",
+    qr_check_wage: "योग्य वेतन तपासा"
+  }
+};
+
+const LANGUAGES = [
+  { code: 'en', label: 'English' },
+  { code: 'hi', label: 'हिन्दी' },
+  { code: 'ta', label: 'தமிழ்' },
+  { code: 'bn', label: 'বাংলা' },
+  { code: 'mr', label: 'मराठी' }
+];
+
 // ── Helpers ────────────────────────────────────────────────────────────
 
 function formatTime(date) {
@@ -106,7 +223,7 @@ function VoiceBubble({ direction, durationSec = 3, audioUrl }) {
   );
 }
 
-function MessageBubble({ msg }) {
+function MessageBubble({ msg, t }) {
   const direction = msg.from === 'user' ? 'outgoing' : 'incoming';
 
   return (
@@ -124,7 +241,7 @@ function MessageBubble({ msg }) {
             rel="noreferrer"
             className={styles.noticeBtn}
           >
-            📄 Download Legal Notice (PDF)
+            {t('downloadNotice')}
           </a>
         )}
         <div className={styles.bubbleMeta}>{formatTime(msg.timestamp)}</div>
@@ -133,7 +250,7 @@ function MessageBubble({ msg }) {
   );
 }
 
-function QuickReplies({ chips, onSelect }) {
+function QuickReplies({ chips, onSelect, t }) {
   if (!chips || chips.length === 0) return null;
   return (
     <div className={styles.quickReplies}>
@@ -141,9 +258,9 @@ function QuickReplies({ chips, onSelect }) {
         <button
           key={chip}
           className={styles.quickReplyChip}
-          onClick={() => onSelect(chip)}
+          onClick={() => onSelect(chip, t(chip))}
         >
-          {chip}
+          {t(chip)}
         </button>
       ))}
     </div>
@@ -152,39 +269,71 @@ function QuickReplies({ chips, onSelect }) {
 
 // ── Initial greeting from the bot ──────────────────────────────────────
 
-const WELCOME_MESSAGE = {
-  id: 0,
-  from: 'bot',
-  type: 'text',
-  timestamp: new Date(),
-  text: `Namaste! 🙏 Main *Suraksha Chakra* hoon.
-
-Main aapki in chezon mein madad kar sakta hoon:
-
-1️⃣  Fair wage jaanne ke liye — apna kaam aur shehar batayein
-2️⃣  Contractor check karne ke liye — unka naam batayein
-3️⃣  Wage report karne ke liye — aapko kitna mila, batayein
-
-Aap *Hindi ya Hinglish* mein likh sakte hain.
-Voice message bhi bhej sakte hain! 🎤`,
-};
-
 const DEFAULT_QUICK_REPLIES = [
-  'Delhi mein raaj mistri ka kaam mila',
-  'Mumbai mein electrician hoon',
-  'Contractor check karna hai',
+  'qr_welcome_1',
+  'qr_welcome_2',
+  'qr_check_contractor',
 ];
 
 // ── Main WorkerChat component ──────────────────────────────────────────
 
 export default function WorkerChat() {
-  const [messages, setMessages] = useState([WELCOME_MESSAGE]);
+  const [lang, setLang] = useState(() => localStorage.getItem('workerLang') || 'en');
+  const [langDropdownOpen, setLangDropdownOpen] = useState(false);
+
+  const t = useCallback((key) => {
+    return TRANSLATIONS[lang]?.[key] || TRANSLATIONS['en'][key] || key;
+  }, [lang]);
+
+  const [messages, setMessages] = useState([]);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [quickReplies, setQuickReplies] = useState(DEFAULT_QUICK_REPLIES);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
   const [sessionId] = useState('demo-user-' + Date.now());
+
+  // Fetch welcome message on mount or when language changes IF no messages exist yet
+  // Or, if language changes and the FIRST message is the welcome message, regenerate it.
+  useEffect(() => {
+    async function fetchWelcome() {
+      setIsTyping(true);
+      try {
+        const response = await sendChatMessage('', sessionId, null, lang);
+        setMessages(prev => {
+          if (prev.length <= 1) {
+            return [{
+              id: 0,
+              from: 'bot',
+              type: 'text',
+              text: response.reply,
+              timestamp: new Date()
+            }];
+          }
+          // If we already have a conversation, just update the latest bot message if it was a welcome msg? 
+          // Actually, let's just leave the history alone if there is a history, except updating the first msg.
+          const newMsgs = [...prev];
+          newMsgs[0] = {
+            ...newMsgs[0],
+            text: response.reply
+          };
+          return newMsgs;
+        });
+        setQuickReplies(response.quick_replies || []);
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setIsTyping(false);
+      }
+    }
+    fetchWelcome();
+  }, [lang, sessionId]);
+
+  const handleLangChange = (code) => {
+    setLang(code);
+    localStorage.setItem('workerLang', code);
+    setLangDropdownOpen(false);
+  };
 
   const listRef = useRef(null);
   const inputRef = useRef(null);
@@ -206,16 +355,17 @@ export default function WorkerChat() {
   }, []);
 
   // Send text message → hit backend → show reply
-  const sendText = useCallback(async (text) => {
-    if (!text.trim()) return;
+  const sendText = useCallback(async (chipKey, displayLabel) => {
+    const textToSend = displayLabel || chipKey;
+    if (!textToSend.trim()) return;
 
-    addMessage({ from: 'user', type: 'text', text: text.trim(), timestamp: new Date() });
+    addMessage({ from: 'user', type: 'text', text: textToSend.trim(), timestamp: new Date() });
     setInputText('');
     setQuickReplies([]);
     setIsTyping(true);
 
     try {
-      const response = await sendChatMessage(text.trim(), sessionId);
+      const response = await sendChatMessage(chipKey.trim(), sessionId, null, lang);
       setIsTyping(false);
       addMessage({ 
         from: 'bot', 
@@ -244,13 +394,13 @@ export default function WorkerChat() {
       addMessage({
         from: 'bot',
         type: 'text',
-        text: 'Sorry, server se connect nahi ho raha. Thodi der baad try karein. 🙏',
+        text: t('serverError'),
         timestamp: new Date(),
       });
     }
-  }, [addMessage, sessionId]);
+  }, [addMessage, sessionId, t, lang]);
 
-  const handleSend = () => sendText(inputText);
+  const handleSend = () => sendText(inputText, inputText);
 
   const handleKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -295,7 +445,7 @@ export default function WorkerChat() {
           reader.readAsDataURL(blob);
 
           const audioBase64 = await base64Promise;
-          const response = await sendChatMessage('', sessionId, audioBase64);
+          const response = await sendChatMessage('', sessionId, audioBase64, lang);
 
           setIsTyping(false);
           addMessage({ 
@@ -324,7 +474,7 @@ export default function WorkerChat() {
           addMessage({
             from: 'bot',
             type: 'text',
-            text: 'Voice message mila, par process nahi ho saka. Text mein try karein. 🙏',
+            text: t('voiceError'),
             timestamp: new Date(),
           });
         }
@@ -344,7 +494,7 @@ export default function WorkerChat() {
       addMessage({
         from: 'bot',
         type: 'text',
-        text: 'Microphone access nahi mila. Please text mein likhen ya browser permissions check karein.',
+        text: t('micError'),
         timestamp: new Date(),
       });
     }
@@ -368,63 +518,92 @@ export default function WorkerChat() {
     <div className={styles.chatScreen}>
       {/* Top bar */}
       <div className={styles.topbar}>
-        <div className={styles.avatar}>🛡️</div>
+        <div className={styles.avatar}>🛡</div>
         <div className={styles.topbarInfo}>
-          <h2>Suraksha Chakra AI</h2>
-          <p><span className={styles.onlineDot}></span> Online • Protecting Workers</p>
+          <h2>{t('title')}</h2>
+          <p><span className={styles.onlineDot}></span> {t('subtitle')}</p>
+        </div>
+
+        {/* Language Selector */}
+        <div className={styles.langSelectorContainer}>
+          <button 
+            className={styles.langSelectorBtn} 
+            onClick={() => setLangDropdownOpen(!langDropdownOpen)}
+          >
+            🌐 {LANGUAGES.find(l => l.code === lang)?.label || 'English'} ▾
+          </button>
+          
+          {langDropdownOpen && (
+            <div className={styles.langDropdown}>
+              {LANGUAGES.map((l) => (
+                <div 
+                  key={l.code}
+                  className={`${styles.langOption} ${lang === l.code ? styles.selected : ''}`}
+                  onClick={() => handleLangChange(l.code)}
+                >
+                  {l.label}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
       {/* Message list */}
       <div className={styles.messageList} ref={listRef}>
-        <div className={styles.dateDivider}><span>Today</span></div>
+        <div className={styles.dateDivider}><span>{t('today')}</span></div>
 
         {messages.map((msg) => (
-          <MessageBubble key={msg.id} msg={msg} />
+          <MessageBubble key={msg.id} msg={msg} t={t} />
         ))}
 
         {isTyping && <TypingBubble />}
       </div>
 
-      {/* Quick replies */}
-      <QuickReplies chips={quickReplies} onSelect={sendText} />
+      {/* Input Section Wrapper */}
+      <div className={styles.inputContainer}>
+        {/* Quick replies above input bar */}
+        <QuickReplies chips={quickReplies} onSelect={sendText} t={t} />
 
-      {/* Input bar */}
-      <div className={styles.inputBar}>
-        <button className={styles.iconBtn} title="Attach" style={{ fontSize: '26px' }}>＋</button>
-        <button className={styles.iconBtn} title="Emoji">😊</button>
-        
-        <div className={styles.inputWrapper}>
-          <textarea
-            ref={inputRef}
-            className={styles.inputField}
-            rows={1}
-            placeholder="Type a message"
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            onKeyDown={handleKeyDown}
-            disabled={isRecording}
-          />
+        {/* Input bar */}
+        <div className={styles.inputBar}>
+          <button className={styles.iconBtn} title="Attach">+</button>
+          <button className={styles.iconBtn} title="Emoji">☺</button>
+          
+          <div className={styles.inputWrapper}>
+            <textarea
+              ref={inputRef}
+              className={styles.inputField}
+              rows={1}
+              placeholder={t('placeholder')}
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              onKeyDown={handleKeyDown}
+              disabled={isRecording}
+            />
+          </div>
+
+          <button className={styles.iconBtn} title="Camera">📷</button>
+
+          {inputText.trim() ? (
+            <button
+              className={`${styles.actionBtn} ${styles.sendBtn}`}
+              onClick={handleSend}
+              disabled={isRecording}
+              title={t('sendBtn')}
+            >
+              ➤
+            </button>
+          ) : (
+            <button
+              className={`${styles.actionBtn} ${styles.micBtn} ${isRecording ? styles.recording : ''}`}
+              onClick={handleMicClick}
+              title={isRecording ? `Recording... ${recordingSeconds}s` : t('voiceBtn')}
+            >
+              {isRecording ? '⏹' : '🎙'}
+            </button>
+          )}
         </div>
-
-        {inputText.trim() ? (
-          <button
-            className={`${styles.actionBtn} ${styles.sendBtn}`}
-            onClick={handleSend}
-            disabled={isRecording}
-            title="Send"
-          >
-            ➤
-          </button>
-        ) : (
-          <button
-            className={`${styles.actionBtn} ${styles.micBtn} ${isRecording ? styles.recording : ''}`}
-            onClick={handleMicClick}
-            title={isRecording ? `Recording... ${recordingSeconds}s` : 'Voice Message'}
-          >
-            {isRecording ? '⏹' : '🎤'}
-          </button>
-        )}
       </div>
     </div>
   );

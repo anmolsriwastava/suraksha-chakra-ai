@@ -31,11 +31,12 @@ async function get(path) {
  * Send a chat message (text or voice) to the new /api/chat endpoint.
  * Returns { reply, session_id, extracted, quick_replies }
  */
-export async function sendChatMessage(message, sessionId = 'demo-user', audioBase64 = null) {
+export async function sendChatMessage(message, sessionId = 'demo-user', audioBase64 = null, language = 'en') {
   return post('/api/chat', {
     message,
     session_id: sessionId,
     audio_base64: audioBase64,
+    language: language
   });
 }
 
@@ -52,6 +53,14 @@ export function fetchDashboardOverview() {
   return get('/api/dashboard/overview');
 }
 
+export function fetchRecentComplaints(limit = 50) {
+  return get(`/api/dashboard/reports?limit=${limit}`);
+}
+
+export function fetchAllContractors() {
+  return get('/api/dashboard/contractors');
+}
+
 export function fetchDistrictHeatmap() {
   return get('/api/dashboard/district-heatmap');
 }
@@ -60,6 +69,14 @@ export function fetchVulnerabilityScores(minScore = 0) {
   return get(`/api/dashboard/vulnerability-scores?min_score=${minScore}`);
 }
 
+export function fetchVulnerabilityOverview() {
+  return get('/api/dashboard/vulnerability-overview');
+}
+
 export function fetchRecentAlerts() {
   return get('/api/dashboard/recent-alerts');
+}
+
+export function fetchComplaintAnalytics() {
+  return get('/api/dashboard/complaint-analytics');
 }
