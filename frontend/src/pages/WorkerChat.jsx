@@ -14,6 +14,7 @@ const TRANSLATIONS = {
     serverError: "Server connection failed. Please try again later.",
     voiceError: "Voice message received but couldn't be processed. Try text.",
     today: "Today",
+    newChat: "New Chat",
     downloadNotice: "📄 Download Legal Notice (PDF)",
     qr_welcome_1: "I got work as a mason in Delhi",
     qr_welcome_2: "I am an electrician in Mumbai",
@@ -38,6 +39,7 @@ const TRANSLATIONS = {
     serverError: "सर्वर से कनेक्ट नहीं हो रहा। थोड़ी देर बाद ट्राई करें।",
     voiceError: "वॉयस मैसेज मिला, पर प्रोसेस नहीं हो सका। टेक्स्ट में ट्राई करें।",
     today: "आज",
+    newChat: "नयी चैट",
     downloadNotice: "📄 कानूनी नोटिस डाउनलोड करें (PDF)",
     qr_welcome_1: "दिल्ली में राज मिस्त्री का काम मिला",
     qr_welcome_2: "मुंबई में इलेक्ट्रीशियन हूँ",
@@ -62,6 +64,7 @@ const TRANSLATIONS = {
     serverError: "சர்வர் இணைப்பு தோல்வி. மீண்டும் முயற்சிக்கவும்.",
     voiceError: "குரல் செய்தி பெறப்பட்டது ஆனால் செயல்படுத்த முடியவில்லை. உரையை முயற்சிக்கவும்.",
     today: "இன்று",
+    newChat: "புதிய அரட்டை",
     downloadNotice: "📄 சட்டபூர்வ அறிவிப்பை பதிவிறக்குக (PDF)",
     qr_welcome_1: "தில்லியில் கொத்தனாராக வேலை கிடைத்தது",
     qr_welcome_2: "மும்பையில் எலக்ட்ரீஷியன்",
@@ -86,6 +89,7 @@ const TRANSLATIONS = {
     serverError: "সার্ভার সংযোগ ব্যর্থ। আবার চেষ্টা করুন।",
     voiceError: "ভয়েস বার্তা পেয়েছি কিন্তু প্রক্রিয়া করতে পারিনি। পাঠ্য চেষ্টা করুন।",
     today: "আজ",
+    newChat: "নতুন চ্যাট",
     downloadNotice: "📄 আইনি নোটিশ ডাউনলোড করুন (PDF)",
     qr_welcome_1: "দিল্লিতে রাজমিস্ত্রির কাজ পেয়েছি",
     qr_welcome_2: "মুম্বাইয়ে ইলেকট্রিশিয়ান",
@@ -110,6 +114,7 @@ const TRANSLATIONS = {
     serverError: "सर्व्हर कनेक्शन अयशस्वी. कृपया पुन्हा प्रयत्न करा.",
     voiceError: "व्हॉइस मेसेज मिळाला पण प्रक्रिया करू शकलो नाही. मजकूर वापरून पहा.",
     today: "आज",
+    newChat: "नवीन गप्पा",
     downloadNotice: "📄 कायदेशीर नोटीस डाउनलोड करा (PDF)",
     qr_welcome_1: "दिल्लीत गवंडी म्हणून काम मिळाले",
     qr_welcome_2: "मुंबईत इलेक्ट्रीशियन आहे",
@@ -134,6 +139,7 @@ const TRANSLATIONS = {
     serverError: "Server se connect nahi ho pa raha. Baad mein try karein.",
     voiceError: "Voice message mila par process nahi ho saka. Text try karein.",
     today: "Aaj",
+    newChat: "New Chat",
     downloadNotice: "📄 Legal Notice Download karein (PDF)",
     qr_welcome_1: "Delhi mein raj mistri ka kaam mila",
     qr_welcome_2: "Mumbai mein electrician hoon",
@@ -346,7 +352,7 @@ export default function WorkerChat() {
     return saved ? JSON.parse(saved) : DEFAULT_QUICK_REPLIES;
   });
   const [recordingSeconds, setRecordingSeconds] = useState(0);
-  const [sessionId] = useState(() => {
+  const [sessionId, setSessionId] = useState(() => {
     const saved = localStorage.getItem('workerSessionId');
     if (saved) return saved;
     const newId = 'demo-user-' + Date.now();
@@ -405,6 +411,18 @@ export default function WorkerChat() {
     setLang(code);
     localStorage.setItem('workerLang', code);
     setLangDropdownOpen(false);
+  };
+
+  const handleNewChat = () => {
+    localStorage.removeItem('workerMessages');
+    localStorage.removeItem('workerSessionId');
+    localStorage.removeItem('workerQuickReplies');
+    
+    const newId = 'demo-user-' + Date.now();
+    setSessionId(newId);
+    setMessages([]);
+    setQuickReplies(DEFAULT_QUICK_REPLIES);
+    fetchedRef.current = false;
   };
 
   const listRef = useRef(null);
@@ -598,6 +616,14 @@ export default function WorkerChat() {
 
         {/* Language Selector */}
         <div className={styles.langSelectorContainer}>
+          <button 
+            className={styles.newChatBtn} 
+            onClick={handleNewChat}
+            style={{ marginRight: '10px', padding: '6px 12px', background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '4px', color: '#fff', cursor: 'pointer', fontSize: '13px' }}
+          >
+            {t('newChat')}
+          </button>
+
           <button 
             className={styles.langSelectorBtn} 
             onClick={() => setLangDropdownOpen(!langDropdownOpen)}
