@@ -51,23 +51,25 @@ def get_district_flood_severity(district: str, state: str) -> float:
         logger.warning(f"OpenWeather API Key missing. Using fallback for {district}")
         return _get_fallback(district_lower)
 
-    # 3. Check Coordinates
+    # 3. Check Coordinates / Setup Params
     coords = DISTRICT_COORDS.get(district_lower)
-    if not coords:
-        logger.warning(f"No coordinates mapped for {district}. Using fallback.")
-        return _get_fallback(district_lower)
+    params = {
+        "appid": api_key,
+        "units": "metric"
+    }
+    
+    if coords:
+        params["lat"] = coords["lat"]
+        params["lon"] = coords["lon"]
+    else:
+        # Fallback to city name search if not in our hardcoded dict
+        params["q"] = f"{district},IN"
 
     # 4. Fetch Live Weather
     try:
         url = "https://api.openweathermap.org/data/2.5/weather"
-        params = {
-            "lat": coords["lat"],
-            "lon": coords["lon"],
-            "appid": api_key,
-            "units": "metric"
-        }
         
-        logger.info(f"Fetching live weather for {district} ({coords['lat']}, {coords['lon']})...")
+        logger.info(f"Fetching live weather for {district}...")
         response = requests.get(url, params=params, timeout=10)
         
         if response.status_code != 200:
