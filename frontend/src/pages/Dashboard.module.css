@@ -1,12 +1,9 @@
 .dashboardPage {
   min-height: 100vh;
-  background-color: #080c16;
-  color: #f8fafc;
+  background-color: #111111;
+  color: #ffffff;
   font-family: 'Inter', sans-serif;
   padding: 40px 6%;
-  /* Subtle dark grid background */
-  background-image: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.02) 1px, transparent 1px);
-  background-size: 24px 24px;
 }
 
 .header {
@@ -19,33 +16,30 @@
 .backBtn {
   align-self: flex-start;
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #94a3b8;
+  border: 1px solid #2d2d2d;
+  color: #a3a3a3;
   padding: 8px 16px;
-  border-radius: 8px;
+  border-radius: 6px;
   cursor: pointer;
   font-size: 14px;
   transition: all 0.2s;
-  backdrop-filter: blur(8px);
 }
 
 .backBtn:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: #f8fafc;
+  background: #1b1b1b;
+  color: #ffffff;
 }
 
 .title {
   font-size: 32px;
   font-weight: 700;
   letter-spacing: -0.5px;
-  background: linear-gradient(to right, #f8fafc, #94a3b8);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: #ffffff;
   margin: 0;
 }
 
 .subtitle {
-  color: #94a3b8;
+  color: #a3a3a3;
   font-size: 15px;
   margin: 0;
 }
@@ -59,22 +53,20 @@
 }
 
 .gatewayCard {
-  background: rgba(15, 23, 42, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 16px;
+  background: #1b1b1b;
+  border: 1px solid #2d2d2d;
+  border-left: 3px solid #d97757;
+  border-radius: 8px;
   padding: 32px;
   display: flex;
   flex-direction: column;
   gap: 16px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-  backdrop-filter: blur(12px);
-  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s, box-shadow 0.3s;
+  transition: transform 0.2s, border-color 0.2s;
 }
 
 .gatewayCard:hover {
-  transform: translateY(-4px);
-  border-color: rgba(255, 255, 255, 0.15);
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  transform: translateY(-2px);
+  border-color: #444444;
 }
 
 .gatewayCard.disabled {
@@ -86,7 +78,7 @@
   font-size: 20px;
   font-weight: 600;
   margin: 0;
-  color: #f8fafc;
+  color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -95,38 +87,38 @@
 .badge {
   font-size: 11px;
   padding: 4px 8px;
-  border-radius: 99px;
+  border-radius: 4px;
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .badge.planned {
-  background: rgba(245, 158, 11, 0.1);
-  color: #f59e0b;
-  border: 1px solid rgba(245, 158, 11, 0.2);
+  background: #2b231d;
+  color: #d97757;
+  border: 1px solid #442b22;
 }
 
 .badge.red {
-  background: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
-  border: 1px solid rgba(239, 68, 68, 0.2);
+  background: #2b1d1d;
+  color: #d95757;
+  border: 1px solid #442222;
 }
 
 .badge.green {
-  background: rgba(16, 185, 129, 0.1);
-  color: #10b981;
-  border: 1px solid rgba(16, 185, 129, 0.2);
+  background: #1d2b24;
+  color: #5bb98b;
+  border: 1px solid #224433;
 }
 
 .badge.yellow {
-  background: rgba(234, 179, 8, 0.1);
-  color: #eab308;
-  border: 1px solid rgba(234, 179, 8, 0.2);
+  background: #2b281d;
+  color: #d9bc57;
+  border: 1px solid #443c22;
 }
 
 .gatewayCard p {
-  color: #94a3b8;
+  color: #a3a3a3;
   font-size: 14.5px;
   line-height: 1.5;
   margin: 0;
@@ -134,20 +126,20 @@
 }
 
 .gatewayBtn {
-  background: #f8fafc;
-  color: #0f172a;
-  border: none;
-  padding: 12px 24px;
-  border-radius: 8px;
+  background: #2b231d;
+  color: #d97757;
+  border: 1px solid #442b22;
+  padding: 10px 20px;
+  border-radius: 6px;
   font-weight: 600;
-  font-size: 14px;
+  font-size: 13px;
   cursor: pointer;
-  transition: opacity 0.2s;
+  transition: all 0.2s;
   align-self: flex-start;
 }
 
 .gatewayBtn:hover {
-  opacity: 0.9;
+  background: #442b22;
 }
 
 /* Stat Grid */
@@ -159,16 +151,14 @@
 }
 
 .statCard {
-  background: rgba(15, 23, 42, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 16px;
+  background: #1b1b1b;
+  border: 1px solid #2d2d2d;
+  border-radius: 8px;
   padding: 24px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-  backdrop-filter: blur(12px);
 }
 
 .statLabel {
-  color: #94a3b8;
+  color: #a3a3a3;
   font-size: 13px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -178,17 +168,16 @@
 .statValue {
   font-size: 32px;
   font-weight: 700;
-  color: #f8fafc;
+  color: #ffffff;
 }
 
 /* Tables */
 .tableCard {
-  background: rgba(15, 23, 42, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 16px;
+  background: #1b1b1b;
+  border: 1px solid #2d2d2d;
+  border-radius: 8px;
   padding: 24px;
   margin-bottom: 40px;
-  backdrop-filter: blur(12px);
   overflow-x: auto;
 }
 
@@ -196,7 +185,7 @@
   font-size: 18px;
   font-weight: 600;
   margin: 0 0 20px 0;
-  color: #f8fafc;
+  color: #ffffff;
 }
 
 .dataTable {
@@ -207,19 +196,19 @@
 
 .dataTable th {
   padding: 12px 16px;
-  color: #64748b;
+  color: #a3a3a3;
   font-size: 12px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   font-weight: 600;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid #2d2d2d;
 }
 
 .dataTable td {
   padding: 16px;
-  color: #cbd5e1;
+  color: #cccccc;
   font-size: 14px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid #1b1b1b;
 }
 
 .dataTable tbody tr {
@@ -228,7 +217,7 @@
 }
 
 .dataTable tbody tr:hover {
-  background: rgba(255, 255, 255, 0.02);
+  background: #222222;
 }
 
 /* Detail Panel */
@@ -245,11 +234,10 @@
 }
 
 .panel {
-  background: rgba(15, 23, 42, 0.8);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 16px;
+  background: #1b1b1b;
+  border: 1px solid #2d2d2d;
+  border-radius: 8px;
   padding: 32px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
 }
 
 .panelTitle {
@@ -257,14 +245,14 @@
   font-weight: 600;
   margin: 0 0 24px 0;
   padding-bottom: 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid #2d2d2d;
 }
 
 .detailRow {
   display: flex;
   justify-content: space-between;
   padding: 12px 0;
-  border-bottom: 1px dashed rgba(255, 255, 255, 0.05);
+  border-bottom: 1px dashed #2d2d2d;
 }
 
 .detailRow:last-child {
@@ -272,20 +260,20 @@
 }
 
 .detailLabel {
-  color: #94a3b8;
+  color: #a3a3a3;
 }
 
 .detailValue {
   font-weight: 600;
-  color: #f8fafc;
+  color: #ffffff;
 }
 
 .actionBtn {
-  background: rgba(255, 255, 255, 0.05);
-  color: #e2e8f0;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #2b281d;
+  color: #d9bc57;
+  border: 1px solid #443c22;
   padding: 6px 12px;
-  border-radius: 6px;
+  border-radius: 4px;
   font-size: 12px;
   cursor: pointer;
   margin-right: 8px;
@@ -293,11 +281,11 @@
 }
 
 .actionBtn:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: #443c22;
 }
 
 .actionBtn.primary {
-  background: rgba(59, 130, 246, 0.1);
-  color: #3b82f6;
-  border-color: rgba(59, 130, 246, 0.2);
+  background: #1d252b;
+  color: #57a3d9;
+  border-color: #223744;
 }

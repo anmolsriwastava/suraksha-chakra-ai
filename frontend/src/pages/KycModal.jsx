@@ -88,7 +88,7 @@ export default function KycModal({ onVerify }) {
                 Enter the OTP sent to +91 {phone} and your Aadhaar number to verify your identity.
               </p>
               <div className={styles.inputGroup}>
-                <label className={styles.label}>OTP</label>
+                <label className={styles.label}>OTP <span style={{fontSize: '0.85em', color: '#64748b', fontWeight: 'normal', textTransform: 'none'}}>(e.g. any 4 digits like 3456 for now)</span></label>
                 <input
                   type="text"
                   className={styles.input}
