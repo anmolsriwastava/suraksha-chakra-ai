@@ -3,10 +3,10 @@ import WorkerChat from './pages/WorkerChat';
 import Dashboard from './pages/Dashboard';
 import KycModal from './pages/KycModal';
 import LandingPage from './pages/LandingPage';
+import LabourOfficerDashboard from './pages/LabourOfficerDashboard';
 
 const NAV = [
   { id: 'chat', icon: '💬', label: 'Worker Bot' },
-  { id: 'dashboard', icon: '📊', label: 'Dashboard' },
 ];
 
 export default function App() {
@@ -18,6 +18,14 @@ export default function App() {
 
   if (activeView === 'landing') {
     return <LandingPage onNavigate={setActiveView} />;
+  }
+
+  if (activeView === 'dashboard') {
+    return <Dashboard onBack={() => setActiveView('landing')} />;
+  }
+
+  if (activeView === 'labour-officer') {
+    return <LabourOfficerDashboard onBack={() => setActiveView('landing')} />;
   }
 
   return (
@@ -42,9 +50,9 @@ export default function App() {
       {/* Main */}
       <div className="main-content">
         {activeView === 'chat' && <WorkerChat />}
-        {activeView === 'dashboard' && <Dashboard />}
       </div>
     </div>
+
     </>
   );
 }

@@ -137,3 +137,118 @@
   from { opacity: 0; transform: translateY(20px) scale(0.95); }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
+
+.infoPanel {
+  margin-top: 32px;
+  background: #f8fafc;
+  border-radius: 8px;
+  padding: 16px;
+  text-align: left;
+  border: 1px solid #e2e8f0;
+}
+
+.infoTitle {
+  font-size: 12px;
+  font-weight: 600;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.infoBody {
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+/* WhatsApp Notice Popup */
+.noticeOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(10, 22, 40, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000; /* Higher than normal overlay */
+  font-family: 'Inter', sans-serif;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.noticeModal {
+  background: #ffffff;
+  width: 90%;
+  max-width: 440px;
+  border-radius: 16px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+  padding: 36px 32px;
+  text-align: center;
+  position: relative;
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.closeBtn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: transparent;
+  border: none;
+  font-size: 24px;
+  color: #9ca3af;
+  cursor: pointer;
+  transition: color 0.2s;
+  line-height: 1;
+}
+
+.closeBtn:hover {
+  color: #111827;
+}
+
+.noticeIcon {
+  width: 64px;
+  height: 64px;
+  background: #ecfdf5;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  margin: 0 auto 20px;
+}
+
+.noticeTitle {
+  font-size: 20px;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 12px;
+}
+
+.noticeBody {
+  font-size: 14.5px;
+  color: #4b5563;
+  line-height: 1.6;
+  margin-bottom: 28px;
+}
+
+.continueBtn {
+  width: 100%;
+  padding: 14px;
+  background: #10b981;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  font-family: inherit;
+}
+
+.continueBtn:hover {
+  background: #059669;
+}

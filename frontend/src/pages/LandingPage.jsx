@@ -26,6 +26,13 @@ const AssetImage = ({ src, alt, className, text }) => {
 export default function LandingPage({ onNavigate }) {
   return (
     <div className={styles.container}>
+      
+      {/* Cinematic Hero Background */}
+      <div className={styles.heroBackground}>
+        <AssetImage src="/assets/hero-main.jpg" alt="Hero Background" className={styles.heroMainImage} text="hero-main.jpg" />
+        <div className={styles.heroOverlay}></div>
+      </div>
+
       {/* Top Nav (Visual Only) */}
       <nav className={styles.navbar}>
         <div className={styles.navLogo}>
@@ -41,23 +48,23 @@ export default function LandingPage({ onNavigate }) {
         </div>
       </nav>
 
-      <main className={styles.main}>
-        <div className={styles.heroSection}>
+      {/* Hero Content Section */}
+      <header className={styles.heroSection}>
+        <div className={styles.heroContent}>
           <h1 className={styles.heroTitle}>SURAKSHA CHAKRA AI SYSTEM</h1>
+
+          <hr className={styles.heroDivider} />
           <p className={styles.heroSubtitle}>
             AI-powered platform for protecting migrant workers, disaster-displaced families, and vulnerable communities through predictive intelligence.
           </p>
           <div className={styles.languageBadge}>
-            <span className={styles.globeIcon}>🌐</span> Available in your <span className={styles.highlight}>regional languages</span>
+            <span className={styles.globeIcon}>🌐</span> Available in 22+ Indian Languages via Voice & Text
           </div>
         </div>
+      </header>
 
-        {/* Hero Background Images */}
-        <div className={styles.heroImagesContainer}>
-          <AssetImage src="/assets/hero-main.jpg" alt="Hero Main" className={styles.heroMainImage} text="hero-main.jpg" />
-        </div>
-
-        {/* Portal Cards */}
+      {/* Main Content (Cards) */}
+      <main className={styles.main}>
         <div className={styles.cardsGrid}>
           {/* Card 1: Labour Intelligence */}
           <div className={`${styles.card} ${styles.cardLabour}`}>
@@ -68,24 +75,26 @@ export default function LandingPage({ onNavigate }) {
               <h2 className={styles.cardTitle}>LABOUR<br/>INTELLIGENCE PLATFORM</h2>
             </div>
             <ul className={styles.featureList}>
-              <li><span className={`${styles.check} ${styles.checkLabour}`}>✓</span> Check fair wages</li>
-              <li><span className={`${styles.check} ${styles.checkLabour}`}>✓</span> Voice/Text complaint registration</li>
-              <li><span className={`${styles.check} ${styles.checkLabour}`}>✓</span> Contractor risk verification</li>
-              <li><span className={`${styles.check} ${styles.checkLabour}`}>✓</span> Legal notice generation</li>
+              <li><span className={styles.bullet}>•</span> AI Wage Verification</li>
+              <li><span className={styles.bullet}>•</span> Anonymous Voice & Text Complaints</li>
+              <li><span className={styles.bullet}>•</span> Check Contractor Risk Before Joining</li>
+              <li><span className={styles.bullet}>•</span> Anonymous Legal Notice Generation</li>
             </ul>
             
-            <div className={styles.prototypeBox}>
-              <div className={styles.prototypeLabel}>Prototype Access</div>
-              <div className={styles.prototypeValue}>WhatsApp (Text Prototype)<br/>+1 (415) 523-8886</div>
+            <div className={styles.glassInnerCard}>
+              <div className={styles.glassInnerHeader}>Prototype Access</div>
+              <div className={styles.glassInnerRow}>
+                <span className={styles.glassInnerLabel}>Web Portal</span>
+              </div>
+              <div className={styles.glassInnerRow}>
+                <span className={styles.glassInnerLabel}>WhatsApp (Text Prototype)</span>
+                <span className={styles.glassInnerValue}>+1 (415) 523-8886</span>
+              </div>
             </div>
 
             <button className={`${styles.cardBtn} ${styles.btnLabour}`} onClick={() => onNavigate('chat')}>
-              Open Platform <span>→</span>
+              Open Platform
             </button>
-            <div className={styles.cardFooter}>
-              <strong>For Workers & Migrant Families</strong>
-              <p>Access all services directly through this web portal or WhatsApp.</p>
-            </div>
           </div>
 
           {/* Card 2: NGO Dashboard */}
@@ -97,21 +106,17 @@ export default function LandingPage({ onNavigate }) {
               <h2 className={styles.cardTitle}>NGO<br/>DASHBOARD</h2>
             </div>
             <ul className={styles.featureList}>
-              <li><span className={`${styles.check} ${styles.checkNgo}`}>✓</span> Vulnerability forecasting</li>
-              <li><span className={`${styles.check} ${styles.checkNgo}`}>✓</span> Disaster early warning</li>
-              <li><span className={`${styles.check} ${styles.checkNgo}`}>✓</span> Trafficking risk prediction</li>
-              <li><span className={`${styles.check} ${styles.checkNgo}`}>✓</span> Resource deployment planning</li>
+              <li><span className={styles.bullet}>•</span> District Risk Forecasting</li>
+              <li><span className={styles.bullet}>•</span> Disaster Displacement Monitoring</li>
+              <li><span className={styles.bullet}>•</span> Trafficking Early Warning</li>
+              <li><span className={styles.bullet}>•</span> Resource Deployment Planning</li>
             </ul>
             
             <div className={styles.spacer}></div>
 
             <button className={`${styles.cardBtn} ${styles.btnNgo}`} onClick={() => onNavigate('dashboard')}>
-              Open Dashboard <span>→</span>
+              Open Dashboard
             </button>
-            <div className={styles.cardFooter}>
-              <strong>For NGOs & Field Organizations</strong>
-              <p>Designed for NGOs to identify vulnerable districts before exploitation begins.</p>
-            </div>
           </div>
 
           {/* Card 3: Officer Dashboard */}
@@ -123,46 +128,61 @@ export default function LandingPage({ onNavigate }) {
               <h2 className={styles.cardTitle}>OFFICER<br/>DASHBOARD</h2>
             </div>
             <ul className={styles.featureList}>
-              <li><span className={`${styles.check} ${styles.checkOfficer}`}>✓</span> Labour complaint analytics</li>
-              <li><span className={`${styles.check} ${styles.checkOfficer}`}>✓</span> High-risk contractor monitoring</li>
-              <li><span className={`${styles.check} ${styles.checkOfficer}`}>✓</span> District-level enforcement insights</li>
-              <li><span className={`${styles.check} ${styles.checkOfficer}`}>✓</span> Decision support analytics</li>
+              <li><span className={styles.bullet}>•</span> Complaint Intelligence</li>
+              <li><span className={styles.bullet}>•</span> High-Risk Contractor Monitoring</li>
+              <li><span className={styles.bullet}>•</span> District Vulnerability Analytics</li>
+              <li><span className={styles.bullet}>•</span> Policy Decision Support</li>
             </ul>
             
             <div className={styles.spacer}></div>
 
-            <button className={`${styles.cardBtn} ${styles.btnOfficer}`} onClick={() => onNavigate('dashboard')}>
-              Open Dashboard <span>→</span>
+            <button className={`${styles.cardBtn} ${styles.btnOfficer}`} onClick={() => onNavigate('labour-officer')}>
+              Open Dashboard
             </button>
-            <div className={styles.cardFooter}>
-              <strong>For Labour Departments & Authorities</strong>
-              <p>Supports labour authorities with actionable intelligence and district-level monitoring.</p>
-            </div>
           </div>
         </div>
 
-        {/* Bottom Banner */}
-        <div className={styles.bottomBanner}>
-          <div className={styles.bannerImageWrapper}>
-            <AssetImage src="/assets/hero-side.jpg" alt="Disaster" className={styles.bannerImage} text="hero-side.jpg" />
-          </div>
-          <div className={styles.bannerContent}>
-            <h3>Every disaster creates a window of exploitation.<br/>
-            <span className={styles.bannerHighlight}>Suraksha Chakra AI helps close it.</span></h3>
-            <p>Predict. Prevent. Protect. Empower.</p>
-          </div>
-        </div>
-
-        <div className={styles.footerLinks}>
-          <span><span className={styles.footerIcon}>♡</span> Protecting Workers</span>
-          <span className={styles.footerSeparator}>|</span>
-          <span><span className={styles.footerIcon}>🛡</span> Preventing Trafficking</span>
-          <span className={styles.footerSeparator}>|</span>
-          <span><span className={styles.footerIcon}>👥</span> Empowering Communities</span>
-          <span className={styles.footerSeparator}>|</span>
-          <span><span className={styles.footerIcon}>⚖</span> Enabling Justice</span>
-        </div>
       </main>
+
+      {/* Cinematic Storytelling Chapter */}
+      <section className={styles.storySection}>
+        <div className={styles.storyBackground}>
+          <AssetImage src="/assets/hero-side.jpg" alt="Disaster" className={styles.storyImage} text="hero-side.jpg" />
+          <div className={styles.storyOverlay}></div>
+        </div>
+        <div className={styles.storyContentWrapper}>
+          <div className={styles.storyContent}>
+            <h3 className={styles.storyTitle}>
+              Every disaster creates a window of exploitation.
+            </h3>
+            <span className={styles.storyHighlight}>Suraksha Chakra AI helps close it.</span>
+
+          </div>
+        </div>
+      </section>
+
+      {/* How Our Intelligence Works (Pipeline) */}
+      <section className={styles.pipelineSection}>
+        <h2 className={styles.pipelineSectionTitle}>How Our Intelligence Works</h2>
+        <div className={styles.pipelineImageWrapper}>
+          <AssetImage 
+            src="/assets/data-pipeline.png" 
+            alt="Data Intelligence Architecture Pipeline" 
+            className={styles.pipelineImage} 
+            text="data-pipeline.png" 
+          />
+        </div>
+      </section>
+
+      <footer className={styles.footerLinks}>
+        <span><span className={styles.footerIcon}>♡</span> Protecting Workers</span>
+        <span className={styles.footerSeparator}>|</span>
+        <span><span className={styles.footerIcon}>🛡</span> Preventing Trafficking</span>
+        <span className={styles.footerSeparator}>|</span>
+        <span><span className={styles.footerIcon}>👥</span> Empowering Communities</span>
+        <span className={styles.footerSeparator}>|</span>
+        <span><span className={styles.footerIcon}>⚖</span> Enabling Justice</span>
+      </footer>
     </div>
   );
 }
