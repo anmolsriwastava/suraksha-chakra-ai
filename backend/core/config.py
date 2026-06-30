@@ -15,6 +15,7 @@ class Settings(BaseSettings):
 
     # External APIs
     groq_api_key: str
+    openweather_api_key: Optional[str] = None
     sarvam_api_key: str = ""
     twilio_account_sid: str = ""
     twilio_auth_token: str = ""
