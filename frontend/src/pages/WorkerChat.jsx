@@ -23,7 +23,10 @@ const TRANSLATIONS = {
     qr_wage_600: "I receive ₹600",
     qr_check_another: "Check another contractor",
     qr_new_wage: "Check new wage",
-    qr_check_wage: "Check fair wage"
+    qr_check_wage: "Check fair wage",
+    qr_plumber_chennai: "I work as a plumber in Chennai",
+    qr_report_issue: "I want to report an issue",
+    qr_need_help: "I need legal help"
   },
   hi: {
     title: "सुरक्षा चक्र एआई",
@@ -44,7 +47,10 @@ const TRANSLATIONS = {
     qr_wage_600: "मुझे ₹600 मिल रहा है",
     qr_check_another: "दूसरा ठेकेदार चेक करना है",
     qr_new_wage: "नया वेतन चेक करना है",
-    qr_check_wage: "उचित वेतन चेक करना है"
+    qr_check_wage: "उचित वेतन चेक करना है",
+    qr_plumber_chennai: "मैं चेन्नई में प्लंबर हूँ",
+    qr_report_issue: "मुझे शिकायत दर्ज करनी है",
+    qr_need_help: "मुझे कानूनी मदद चाहिए"
   },
   ta: {
     title: "சுரக்‌ஷா சக்ரா AI",
@@ -65,7 +71,10 @@ const TRANSLATIONS = {
     qr_wage_600: "எனக்கு ₹600 கிடைக்கிறது",
     qr_check_another: "மற்றொரு ஒப்பந்ததாரரை சரிபார்க்கவும்",
     qr_new_wage: "புதிய ஊதியத்தை சரிபார்க்கவும்",
-    qr_check_wage: "சரியான ஊதியத்தை சரிபார்க்கவும்"
+    qr_check_wage: "சரியான ஊதியத்தை சரிபார்க்கவும்",
+    qr_plumber_chennai: "நான் சென்னையில் பிளம்பராக வேலை செய்கிறேன்",
+    qr_report_issue: "நான் ஒரு சிக்கலைப் புகாரளிக்க விரும்புகிறேன்",
+    qr_need_help: "எனக்கு சட்ட உதவி தேவை"
   },
   bn: {
     title: "সুরক্ষা চক্র এআই",
@@ -86,7 +95,10 @@ const TRANSLATIONS = {
     qr_wage_600: "আমি ₹৬০০ পাই",
     qr_check_another: "অন্য ঠিকাদার চেক করুন",
     qr_new_wage: "নতুন মজুরি চেক করুন",
-    qr_check_wage: "সঠিক মজুরি চেক করুন"
+    qr_check_wage: "সঠিক মজুরি চেক করুন",
+    qr_plumber_chennai: "আমি চেন্নাইতে প্লাম্বার হিসেবে কাজ করি",
+    qr_report_issue: "আমি একটি অভিযোগ জানাতে চাই",
+    qr_need_help: "আমার আইনি সাহায্য প্রয়োজন"
   },
   mr: {
     title: "सुरक्षा चक्र एआय",
@@ -107,7 +119,10 @@ const TRANSLATIONS = {
     qr_wage_600: "मला ₹600 मिळतात",
     qr_check_another: "दुसरा कंत्राटदार तपासा",
     qr_new_wage: "नवीन वेतन तपासा",
-    qr_check_wage: "योग्य वेतन तपासा"
+    qr_check_wage: "योग्य वेतन तपासा",
+    qr_plumber_chennai: "मी चेन्नईमध्ये प्लंबर म्हणून काम करतो",
+    qr_report_issue: "मला तक्रार नोंदवायची आहे",
+    qr_need_help: "मला कायदेशीर मदत हवी आहे"
   }
 };
 
@@ -273,6 +288,9 @@ const DEFAULT_QUICK_REPLIES = [
   'qr_welcome_1',
   'qr_welcome_2',
   'qr_check_contractor',
+  'qr_plumber_chennai',
+  'qr_report_issue',
+  'qr_need_help',
 ];
 
 // ── Main WorkerChat component ──────────────────────────────────────────

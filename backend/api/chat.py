@@ -93,6 +93,9 @@ QUICK_REPLIES = {
         "qr_welcome_1",
         "qr_welcome_2",
         "qr_check_contractor",
+        "qr_plumber_chennai",
+        "qr_report_issue",
+        "qr_need_help",
     ],
     "after_wage": [
         "qr_wage_400",
