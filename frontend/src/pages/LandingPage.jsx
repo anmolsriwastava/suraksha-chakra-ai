@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import styles from './LandingPage.module.css';
 
 // Component that renders an image if available, else a dashed placeholder
-const AssetImage = ({ src, alt, className, text }) => {
+const AssetImage = ({ src, alt, className, text, loading }) => {
   const [error, setError] = useState(false);
 
   if (error) {
@@ -19,6 +19,7 @@ const AssetImage = ({ src, alt, className, text }) => {
       alt={alt}
       className={className}
       onError={() => setError(true)}
+      loading={loading}
     />
   );
 };
@@ -29,14 +30,14 @@ export default function LandingPage({ onNavigate }) {
       
       {/* Cinematic Hero Background */}
       <div className={styles.heroBackground}>
-        <AssetImage src="/assets/hero-main.jpg" alt="Hero Background" className={styles.heroMainImage} text="hero-main.jpg" />
+        <AssetImage src="/assets/hero-main.webp" alt="Hero Background" className={styles.heroMainImage} text="hero-main.webp" loading="eager" />
         <div className={styles.heroOverlay}></div>
       </div>
 
       {/* Top Nav (Visual Only) */}
       <nav className={styles.navbar}>
         <div className={styles.navLogo}>
-          <AssetImage src="/assets/logo.png" alt="Logo" className={styles.logoIcon} text="logo.png" />
+          <AssetImage src="/assets/logo.webp" alt="Logo" className={styles.logoIcon} text="logo.webp" loading="eager" />
           <div className={styles.logoText}>
             <div>SURAKSHA</div>
             <div>CHAKRA AI</div>
@@ -70,7 +71,7 @@ export default function LandingPage({ onNavigate }) {
           <div className={`${styles.card} ${styles.cardLabour}`}>
             <div className={styles.cardHeader}>
               <div className={`${styles.cardIconWrapper} ${styles.iconLabour}`}>
-                <AssetImage src="/assets/labour.png" alt="Labour" className={styles.cardIcon} text="labour.png" />
+                <AssetImage src="/assets/labour.webp" alt="Labour" className={styles.cardIcon} text="labour.webp" loading="eager" />
               </div>
               <h2 className={styles.cardTitle}>LABOUR<br/>INTELLIGENCE PLATFORM</h2>
             </div>
@@ -101,7 +102,7 @@ export default function LandingPage({ onNavigate }) {
           <div className={`${styles.card} ${styles.cardNgo}`}>
             <div className={styles.cardHeader}>
               <div className={`${styles.cardIconWrapper} ${styles.iconNgo}`}>
-                <AssetImage src="/assets/ngo.png" alt="NGO" className={styles.cardIcon} text="ngo.png" />
+                <AssetImage src="/assets/ngo.webp" alt="NGO" className={styles.cardIcon} text="ngo.webp" loading="eager" />
               </div>
               <h2 className={styles.cardTitle}>NGO<br/>DASHBOARD</h2>
             </div>
@@ -123,7 +124,7 @@ export default function LandingPage({ onNavigate }) {
           <div className={`${styles.card} ${styles.cardOfficer}`}>
             <div className={styles.cardHeader}>
               <div className={`${styles.cardIconWrapper} ${styles.iconOfficer}`}>
-                <AssetImage src="/assets/officer.png" alt="Officer" className={styles.cardIcon} text="officer.png" />
+                <AssetImage src="/assets/officer.webp" alt="Officer" className={styles.cardIcon} text="officer.webp" loading="eager" />
               </div>
               <h2 className={styles.cardTitle}>OFFICER<br/>DASHBOARD</h2>
             </div>
@@ -147,7 +148,7 @@ export default function LandingPage({ onNavigate }) {
       {/* Cinematic Storytelling Chapter */}
       <section className={styles.storySection}>
         <div className={styles.storyBackground}>
-          <AssetImage src="/assets/hero-side.jpg" alt="Disaster" className={styles.storyImage} text="hero-side.jpg" />
+          <AssetImage src="/assets/hero-side.webp" alt="Disaster" className={styles.storyImage} text="hero-side.webp" loading="lazy" />
           <div className={styles.storyOverlay}></div>
         </div>
         <div className={styles.storyContentWrapper}>
@@ -166,10 +167,11 @@ export default function LandingPage({ onNavigate }) {
         <h2 className={styles.pipelineSectionTitle}>How Our Intelligence Works</h2>
         <div className={styles.pipelineImageWrapper}>
           <AssetImage 
-            src="/assets/data-pipeline.png" 
+            src="/assets/data-pipeline.webp" 
             alt="Data Intelligence Architecture Pipeline" 
             className={styles.pipelineImage} 
-            text="data-pipeline.png" 
+            text="data-pipeline.webp" 
+            loading="lazy"
           />
         </div>
       </section>
