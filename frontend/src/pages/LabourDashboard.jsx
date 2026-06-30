@@ -61,11 +61,11 @@ export default function LabourDashboard({ onBack }) {
 
       <div className={styles.statGrid}>
         <div className={styles.statCard}>
-          <div className={styles.statLabel}>Total Complaints</div>
+          <div className={styles.statLabel}>Total Reports</div>
           <div className={styles.statValue}>{overview?.total_complaints || 0}</div>
         </div>
         <div className={styles.statCard}>
-          <div className={styles.statLabel}>Complaints (Last 7 Days)</div>
+          <div className={styles.statLabel}>Reports (Last 7 Days)</div>
           <div className={styles.statValue}>{overview?.complaints_last_7_days || 0}</div>
         </div>
         <div className={styles.statCard}>
@@ -79,7 +79,7 @@ export default function LabourDashboard({ onBack }) {
       </div>
 
       <div className={styles.tableCard}>
-        <h3 className={styles.tableTitle}>Recent Complaints</h3>
+        <h3 className={styles.tableTitle}>Recent Reports</h3>
         <table className={styles.dataTable}>
           <thead>
             <tr>
@@ -95,7 +95,7 @@ export default function LabourDashboard({ onBack }) {
           </thead>
           <tbody>
             {complaints.length === 0 ? (
-              <tr><td colSpan={8} style={{ textAlign: 'center' }}>No recent complaints found.</td></tr>
+              <tr><td colSpan={8} style={{ textAlign: 'center' }}>No recent reports found.</td></tr>
             ) : (
               complaints.map(c => (
                 <tr key={c.id}>
@@ -164,7 +164,7 @@ export default function LabourDashboard({ onBack }) {
             <thead>
               <tr>
                 <th>District</th>
-                <th>Complaints</th>
+                <th>Reports</th>
                 <th>Avg Gap</th>
                 <th>Trend</th>
               </tr>

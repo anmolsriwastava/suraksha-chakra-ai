@@ -21,7 +21,7 @@ router = APIRouter()
 @router.get("/overview")
 def get_dashboard_overview(ngo_district: str = "ALL_DISTRICTS", db: Session = Depends(get_db_session)):
     """Top-level numbers for the dashboard header cards."""
-    q_reports = db.query(func.count(WageReport.id)).filter(WageReport.wage_gap > 0)
+    q_reports = db.query(func.count(WageReport.id))
     if ngo_district != "ALL_DISTRICTS":
         q_reports = q_reports.filter(WageReport.district == ngo_district)
         
@@ -67,7 +67,6 @@ def get_recent_complaints(limit: int = 50, ngo_district: str = "ALL_DISTRICTS", 
     q = (
         db.query(WageReport, ContractorRisk.name.label("contractor_name"))
         .outerjoin(ContractorRisk, WageReport.contractor_id == ContractorRisk.id)
-        .filter(WageReport.wage_gap > 0)
         .order_by(desc(WageReport.reported_at))
     )
     
@@ -128,7 +127,7 @@ def get_all_contractors(ngo_district: str = "ALL_DISTRICTS", db: Session = Depen
 def get_complaint_analytics(ngo_district: str = "ALL_DISTRICTS", db: Session = Depends(get_db_session)):
     """Analytics for Labour Officer Dashboard."""
     now = datetime.utcnow()
-    q_reports = db.query(WageReport).filter(WageReport.wage_gap > 0)
+    q_reports = db.query(WageReport)
     
     if ngo_district != "ALL_DISTRICTS":
         q_reports = q_reports.filter(WageReport.district == ngo_district)
@@ -173,7 +172,6 @@ def get_district_heatmap(ngo_district: str = "ALL_DISTRICTS", db: Session = Depe
             func.count(WageReport.id).label("report_count"),
             func.avg(WageReport.wage_gap).label("avg_wage_gap"),
         )
-        .filter(WageReport.wage_gap > 0)
         .group_by(WageReport.district, WageReport.state)
     )
     
