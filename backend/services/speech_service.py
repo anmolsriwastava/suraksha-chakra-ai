@@ -97,7 +97,6 @@ async def _transcribe_with_groq(audio_bytes: bytes) -> str:
             result = client.audio.transcriptions.create(
                 file=audio_file,
                 model="whisper-large-v3",
-                language="hi",
                 response_format="json",
                 temperature=0,
             )

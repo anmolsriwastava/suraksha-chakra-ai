@@ -455,7 +455,7 @@ export default function WorkerChat() {
     setIsTyping(true);
 
     try {
-      const response = await sendChatMessage(chipKey.trim(), sessionId, null, lang);
+      const response = await sendChatMessage(textToSend.trim(), sessionId, null, lang);
       setIsTyping(false);
       addMessage({ 
         from: 'bot', 
